@@ -1,0 +1,92 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}BERAKÁ | Cotizaciones{% endblock %}</title>
+
+    <link rel="stylesheet"
+          href="{% static 'css/dashboard.css' %}">
+
+</head>
+
+<body>
+
+    <aside class="sidebar">
+
+        <div class="brand">
+            <span class="brand-name">BERAKÁ</span>
+            <span class="brand-subtitle">Eventos & Banquetes</span>
+        </div>
+
+        <nav class="menu">
+
+            <a href="{% url 'dashboard' %}"
+               class="menu-item active">
+                <span>⌂</span>
+                Dashboard
+            </a>
+
+            <a href="#" class="menu-item">
+                <span>♙</span>
+                Clientes
+            </a>
+
+            <a href="#" class="menu-item">
+                <span>◫</span>
+                Eventos
+            </a>
+
+            <a href="#" class="menu-item">
+                <span>▤</span>
+                Cotizaciones
+            </a>
+
+            <a href="#" class="menu-item">
+                <span>◈</span>
+                Productos
+            </a>
+
+            <a href="#" class="menu-item">
+                <span>✦</span>
+                Montaje
+            </a>
+
+            <a href="#" class="menu-item">
+                <span>＄</span>
+                Pagos
+            </a>
+
+            <a href="#" class="menu-item">
+                <span>♧</span>
+                Proveedores
+            </a>
+
+        </nav>
+
+        <div class="sidebar-footer">
+            Sistema de gestión
+            <br>
+            <strong>BERAKÁ</strong>
+        </div>
+
+    </aside>
+
+
+    <main class="main-content">
+
+        {% block content %}
+        {% endblock %}
+
+    </main>
+
+</body>
+
+</html>
