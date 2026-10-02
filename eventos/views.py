@@ -7,6 +7,12 @@ from .models import (
     Eventos,
     Cotizaciones,
     Pagos,
+    TiposEvento,
+    ProductosEvento,
+    Servicios,
+    ElementosMontaje,
+    PaquetesEvento,
+    AreasEvento,
 )
 
 
@@ -38,7 +44,7 @@ def login_view(request):
             request,
             "login.html",
             {
-                "error": "Usuario o contraseña incorrectos."
+                "error": "Usuario o contraseÃ±a incorrectos."
             }
         )
 
@@ -67,7 +73,7 @@ def dashboard(request):
 
 
 # ============================================================
-# CERRAR SESIÓN
+# CERRAR SESIÃ“N
 # ============================================================
 
 def logout_view(request):
@@ -87,19 +93,19 @@ def obtener_eventos_temporales():
 
         {
             "numero": "COT-001",
-            "cliente": "María López",
+            "cliente": "MarÃa LÃ³pez",
             "evento": "Boda",
             "tipo": "Boda",
             "fecha": "15/10/2026",
             "hora": "4:00 PM - 9:00 PM",
             "personas": 50,
-            "lugar": "Salón VIP",
+            "lugar": "SalÃ³n VIP",
             "estado": "Pendiente",
             "total": 2131.25,
             "paquete": "Paquete VIP",
             "telefono": "7123-4567",
             "correo": "maria@email.com",
-            "observaciones": "Ceremonia en jardín.",
+            "observaciones": "Ceremonia en jardÃn.",
         },
 
         {
@@ -121,8 +127,8 @@ def obtener_eventos_temporales():
 
         {
             "numero": "COT-003",
-            "cliente": "Carlos Martínez",
-            "evento": "Cumpleaños",
+            "cliente": "Carlos MartÃnez",
+            "evento": "CumpleaÃ±os",
             "tipo": "Social",
             "fecha": "25/10/2026",
             "hora": "5:00 PM - 9:00 PM",
@@ -133,21 +139,21 @@ def obtener_eventos_temporales():
             "paquete": "Evento por Consumo",
             "telefono": "7012-3456",
             "correo": "carlos@email.com",
-            "observaciones": "Celebración familiar.",
+            "observaciones": "CelebraciÃ³n familiar.",
         },
 
         {
             "numero": "COT-004",
-            "cliente": "Ana Rodríguez",
-            "evento": "Graduación",
-            "tipo": "Graduación",
+            "cliente": "Ana RodrÃguez",
+            "evento": "GraduaciÃ³n",
+            "tipo": "GraduaciÃ³n",
             "fecha": "02/11/2026",
             "hora": "3:00 PM - 8:00 PM",
             "personas": 65,
-            "lugar": "Salón Las Orquídeas",
+            "lugar": "SalÃ³n Las OrquÃdeas",
             "estado": "Pendiente",
             "total": 2750.00,
-            "paquete": "Evento por Consumo + Salón Las Orquídeas",
+            "paquete": "Evento por Consumo + SalÃ³n Las OrquÃdeas",
             "telefono": "7456-7890",
             "correo": "ana@email.com",
             "observaciones": "Se requiere proyector.",
@@ -155,7 +161,7 @@ def obtener_eventos_temporales():
 
         {
             "numero": "COT-005",
-            "cliente": "Corporación XYZ",
+            "cliente": "CorporaciÃ³n XYZ",
             "evento": "Conferencia empresarial",
             "tipo": "Corporativo",
             "fecha": "08/11/2026",
@@ -164,7 +170,7 @@ def obtener_eventos_temporales():
             "lugar": "Terraza Secundaria",
             "estado": "Confirmado",
             "total": 4200.00,
-            "paquete": "Evento por Consumo + Salón Las Orquídeas",
+            "paquete": "Evento por Consumo + SalÃ³n Las OrquÃdeas",
             "telefono": "2222-3333",
             "correo": "eventos@xyz.com",
             "observaciones": "Evento empresarial.",
@@ -172,7 +178,7 @@ def obtener_eventos_temporales():
 
         {
             "numero": "COT-006",
-            "cliente": "Sofía Hernández",
+            "cliente": "SofÃa HernÃ¡ndez",
             "evento": "Baby Shower",
             "tipo": "Social",
             "fecha": "14/11/2026",
@@ -196,86 +202,82 @@ def obtener_eventos_temporales():
 
 def obtener_paquetes():
 
-    return [
+    paquetes_db = (
+        PaquetesEvento.objects
+        .filter(activo=True)
+        .select_related("tipo_evento")
+        .prefetch_related(
+            "productos__producto__categoria",
+            "servicios__servicio",
+            "montajes__elemento",
+        )
+        .order_by("nombre")
+    )
 
-        {
-            "id": "consumo",
-            "nombre": "Evento por Consumo",
-            "subtitulo": "Paquete 1",
-            "descripcion": (
-                "Ideal para celebraciones dentro del restaurante."
-            ),
-            "precio": "Consumo",
-            "tipo_precio": "consumo",
+    paquetes = []
+
+    for paquete in paquetes_db:
+        productos = []
+        servicios = []
+        montajes = []
+
+        for item in paquete.productos.all():
+            productos.append({
+                "nombre": item.producto.nombre,
+                "cantidad": float(item.cantidad or 0)
+            })
+
+        for item in paquete.servicios.all():
+            servicios.append({
+                "nombre": item.servicio.nombre,
+                "cantidad": float(item.cantidad or 0)
+            })
+
+        for item in paquete.montajes.all():
+            montajes.append({
+                "nombre": item.elemento.nombre,
+                "cantidad": float(item.cantidad or 0)
+            })
+
+        if paquete.precio_base == 0:
+            precio = 0
+            tipo_precio = "consumo"
+        else:
+            precio = float(paquete.precio_base)
+            # Los paquetes VIP/infantil se cobran por persona;
+            # los demás paquetes con monto base se cobran por evento.
+            nombre_lower = paquete.nombre.lower()
+            tipo_precio = "persona" if (
+                "vip" in nombre_lower or
+                "infantil" in nombre_lower
+            ) else "fijo"
+
+        nota = ""
+        if tipo_precio == "consumo":
+            nota = "Consumo según los alimentos y bebidas seleccionados."
+        elif tipo_precio == "persona":
+            nota = "Precio base por persona. La cantidad se actualiza con el número de invitados."
+        else:
+            nota = "Precio base por evento."
+
+        paquetes.append({
+            "id": str(paquete.id_paquete),
+            "nombre": paquete.nombre,
+            "subtitulo": paquete.tipo_evento.nombre,
+            "descripcion": paquete.descripcion or "",
+            "precio": precio,
+            "tipo_precio": tipo_precio,
+            "productos": productos,
+            "servicios": servicios,
+            "montajes": montajes,
+            "nota": nota,
             "incluye": [
-                "Elección de entrada",
-                "Elección de plato fuerte",
-                "Elección de bebida",
-                "Elección de postre",
-                "Reserva de espacio dentro del restaurante",
+                item["nombre"]
+                for item in productos + servicios + montajes
             ],
-            "nota": (
-                "No permite bocinas, música, baile ni DJ. "
-                "Se agrega 10% de propina sobre el consumo."
-            ),
-        },
+        })
 
-        {
-            "id": "orquideas",
-            "nombre": "Evento por Consumo + Salón Las Orquídeas",
-            "subtitulo": "Paquete 2",
-            "descripcion": (
-                "Evento privado en un espacio equipado."
-            ),
-            "precio": 250.00,
-            "tipo_precio": "fijo",
-            "incluye": [
-                "Elección de entrada",
-                "Elección de plato fuerte",
-                "Elección de bebida",
-                "Elección de postre",
-                "5 horas de Salón Las Orquídeas",
-                "Aire acondicionado",
-                "Sonido profesional",
-                "Uso de proyector",
-                "Mesas y sillas",
-            ],
-            "nota": (
-                "$250 por 5 horas más el consumo de alimentos "
-                "y bebidas. Se agrega 10% de propina."
-            ),
-        },
-
-        {
-            "id": "vip",
-            "nombre": "Paquete VIP",
-            "subtitulo": "Experiencia completa",
-            "descripcion": (
-                "Alimentación, bebidas, montaje y servicio "
-                "para los invitados."
-            ),
-            "precio": "Desde $33.75 p/p",
-            "tipo_precio": "persona",
-            "incluye": [
-                "Ensalada Caprese con pesto de la casa",
-                "Elección de plato fuerte",
-                "Refil de gaseosa",
-                "Estación de café",
-                "Base de plato + copa",
-                "Manteles",
-                "Servilletas de tela",
-                "Florero",
-                "Descorche de pastel",
-                "Meseros exclusivos",
-                "Uso de jardín para ceremonia",
-            ],
-            "nota": (
-                "Vegetariano $33.75 p/p · Pollo $37.25 p/p · "
-                "Carne $40.75 p/p. Se agrega 10% de propina."
-            ),
-        },
-
-    ]
+    return paquetes
 
 
 # ============================================================
@@ -357,191 +359,64 @@ def detalle_evento(request, numero):
 
 
 # ============================================================
-# NUEVA COTIZACIÓN
+# NUEVA COTIZACIÃ“N
 # ============================================================
 
 @login_required(login_url="login")
 def nueva_cotizacion(request):
 
-    # ========================================================
-    # LUGARES
-    # ========================================================
+    import json
 
-    lugares = [
-        "Terraza Principal",
-        "Terraza Secundaria",
-        "Salón Las Orquídeas",
-        "Restaurante",
-        "Salón VIP",
-        "Otro",
-    ]
-
-    # ========================================================
-    # TIPOS DE EVENTO
-    # ========================================================
-
-    tipos_evento = [
-        "Boda",
-        "Graduación",
-        "Cumpleaños",
-        "Evento corporativo",
-        "Conferencia",
-        "Reunión empresarial",
-        "Baby Shower",
-        "XV años",
-        "Cena",
-        "Aniversario",
-        "Otro",
-    ]
-
-    # ========================================================
-    # CATÁLOGO TEMPORAL
-    # ========================================================
-
-    catalogo = [
-
-        {
-            "nombre": "Entrada de ensalada caprese con pesto de la casa",
-            "tipo": "Servicio de alimentos",
-            "precio": 3.50,
-            "unidad": "persona",
-        },
-
-        {
-            "nombre": "Plato de pollo",
-            "tipo": "Servicio de alimentos",
-            "precio": 21.50,
-            "unidad": "persona",
-        },
-
-        {
-            "nombre": "Refil de gaseosa",
-            "tipo": "Bebidas",
-            "precio": 2.50,
-            "unidad": "persona",
-        },
-
-        {
-            "nombre": "Estación de café",
-            "tipo": "Bebidas",
-            "precio": 1.50,
-            "unidad": "persona",
-        },
-
-        {
-            "nombre": "Base de plato",
-            "tipo": "Montaje",
-            "precio": 1.50,
-            "unidad": "persona",
-        },
-
-        {
-            "nombre": "Copa",
-            "tipo": "Montaje",
-            "precio": 1.50,
-            "unidad": "persona",
-        },
-
-        {
-            "nombre": "Servilleta de tela",
-            "tipo": "Montaje",
-            "precio": 0.50,
-            "unidad": "persona",
-        },
-
-        {
-            "nombre": "Meseros",
-            "tipo": "Personal",
-            "precio": 2.00,
-            "unidad": "persona",
-        },
-
-        {
-            "nombre": "Florero",
-            "tipo": "Decoración",
-            "precio": 0.25,
-            "unidad": "persona",
-        },
-
-        {
-            "nombre": "Descorche de pastel",
-            "tipo": "Servicio",
-            "precio": 1.00,
-            "unidad": "persona",
-        },
-
-        {
-            "nombre": "Servicio de sonido y luces",
-            "tipo": "Servicios",
-            "precio": 125.00,
-            "unidad": "evento",
-        },
-
-        {
-            "nombre": "Manteles",
-            "tipo": "Montaje",
-            "precio": 0.50,
-            "unidad": "persona",
-        },
-
-    ]
-
-    # ========================================================
-    # SERVICIOS VARIABLES
-    # ========================================================
-
-    variables = [
-
-        {
-            "nombre": "Descorche de boquitas",
-            "descripcion": "$25 por cada opción de boquita seleccionada.",
-            "precio": 25.00,
-            "unidad": "opción",
-        },
-
-        {
-            "nombre": "2 horas de barra libre",
-            "descripcion": "Servicio de barra libre después de la cena.",
-            "precio": 10.00,
-            "unidad": "persona",
-        },
-
-        {
-            "nombre": "Hora extra",
-            "descripcion": "Hora adicional de evento.",
-            "precio": 150.00,
-            "unidad": "hora",
-        },
-
-        {
-            "nombre": "DJ",
-            "descripcion": "Servicio de DJ por 5 horas.",
-            "precio": 150.00,
-            "unidad": "evento",
-        },
-
-    ]
-
-    # ========================================================
-    # CATEGORÍAS ÚNICAS
-    # ========================================================
-
-    categorias = list(
-        dict.fromkeys(
-            item["tipo"]
-            for item in catalogo
-        )
+    lugares = list(
+        AreasEvento.objects
+        .filter(estado=True)
+        .values_list("nombre", flat=True)
     )
 
-    # ========================================================
-    # PAQUETES
-    # ========================================================
+    tipos_evento = list(
+        TiposEvento.objects
+        .filter(estado=True)
+        .values_list("nombre", flat=True)
+        .order_by("nombre")
+    )
 
+    productos_db = (
+        ProductosEvento.objects
+        .filter(estado=True)
+        .select_related("categoria")
+        .order_by("nombre")
+    )
+
+    catalogo = []
+
+    for producto in productos_db:
+        catalogo.append({
+            "id": producto.producto_evento_id,
+            "nombre": producto.nombre,
+            "tipo": producto.categoria.nombre if producto.categoria else "Sin categoría",
+            "precio": float(producto.precio_base or 0),
+            "unidad": producto.unidad_medida,
+        })
+
+    servicios_db = (
+        Servicios.objects
+        .filter(estado=True)
+        .order_by("nombre")
+    )
+
+    variables = []
+
+    for servicio in servicios_db:
+        variables.append({
+            "id": servicio.servicio_id,
+            "nombre": servicio.nombre,
+            "descripcion": servicio.descripcion or "",
+            "precio": float(servicio.precio_base or 0),
+            "unidad": "evento",
+        })
+
+    categorias = list(dict.fromkeys(item["tipo"] for item in catalogo))
     paquetes = obtener_paquetes()
-
-    # ========================================================
-    # CONTEXTO
-    # ========================================================
 
     context = {
         "lugares": lugares,
@@ -550,6 +425,7 @@ def nueva_cotizacion(request):
         "variables": variables,
         "categorias": categorias,
         "paquetes": paquetes,
+        "paquetes_json": json.dumps(paquetes, ensure_ascii=False),
     }
 
     return render(
@@ -566,13 +442,13 @@ def registro_eventos(request):
     eventos = [
         {
             "numero": "COT-001",
-            "cliente": "María López",
+            "cliente": "MarÃa LÃ³pez",
             "evento": "Boda",
             "tipo": "Boda",
             "fecha": "15/10/2026",
             "hora": "4:00 PM - 9:00 PM",
             "personas": 50,
-            "lugar": "Salón VIP",
+            "lugar": "SalÃ³n VIP",
             "estado": "Pendiente",
             "total": 2131.25,
         },
@@ -590,8 +466,8 @@ def registro_eventos(request):
         },
         {
             "numero": "COT-003",
-            "cliente": "Carlos Martínez",
-            "evento": "Cumpleaños",
+            "cliente": "Carlos MartÃnez",
+            "evento": "CumpleaÃ±os",
             "tipo": "Social",
             "fecha": "25/10/2026",
             "hora": "5:00 PM - 9:00 PM",
@@ -602,19 +478,19 @@ def registro_eventos(request):
         },
         {
             "numero": "COT-004",
-            "cliente": "Ana Rodríguez",
-            "evento": "Graduación",
-            "tipo": "Graduación",
+            "cliente": "Ana RodrÃguez",
+            "evento": "GraduaciÃ³n",
+            "tipo": "GraduaciÃ³n",
             "fecha": "02/11/2026",
             "hora": "3:00 PM - 8:00 PM",
             "personas": 65,
-            "lugar": "Salón Las Orquídeas",
+            "lugar": "SalÃ³n Las OrquÃdeas",
             "estado": "Pendiente",
             "total": 2750.00,
         },
         {
             "numero": "COT-005",
-            "cliente": "Corporación XYZ",
+            "cliente": "CorporaciÃ³n XYZ",
             "evento": "Conferencia empresarial",
             "tipo": "Corporativo",
             "fecha": "08/11/2026",
@@ -626,7 +502,7 @@ def registro_eventos(request):
         },
         {
             "numero": "COT-006",
-            "cliente": "Sofía Hernández",
+            "cliente": "SofÃa HernÃ¡ndez",
             "evento": "Baby Shower",
             "tipo": "Social",
             "fecha": "14/11/2026",

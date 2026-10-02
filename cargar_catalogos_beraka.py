@@ -52,7 +52,7 @@ tipos_evento = [
     ("XV años", "Celebración de XV años.", True),
     ("Cena", "Cena o evento gastronómico.", True),
     ("Aniversario", "Celebración de aniversario.", True),
-    ("CUMPLEAÑOS INFANTIL", "Evento infantil de cumpleaños.", True),
+    ("Piñata", "Evento infantil de piñata.", True),
     ("Otro", "Otro tipo de evento.", True),
 ]
 
@@ -396,7 +396,7 @@ print(f"Elementos de montaje cargados/actualizados: {len(montajes)}")
 #    - Uso de salón 5 horas: $100 fijo
 #    - Costo por persona indicado: $14.33
 #
-# El paquete infantil queda registrado aquí como especificación
+# El Paquete Piñata queda registrado aquí como especificación
 # hasta que agreguemos las tablas de paquetes y sus relaciones.
 
 print("\n=== CARGA TERMINADA ===")
