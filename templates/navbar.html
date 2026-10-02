@@ -1,0 +1,35 @@
+<nav class="main-navbar">
+
+    <div class="navbar-container">
+
+        <a href="{% url 'dashboard' %}" class="navbar-brand">
+            <span class="brand-name">BERAKÁ</span>
+            <span class="brand-subtitle">Hotel & Restaurante</span>
+        </a>
+
+        <div class="navbar-menu">
+
+            <a href="{% url 'registro_eventos' %}"
+               class="navbar-link">
+                Eventos
+            </a>
+
+            <a href="{% url 'nueva_cotizacion' %}"
+               class="navbar-link">
+                Nueva cotización
+            </a>
+
+            <a href="{% url 'dashboard' %}"
+               class="navbar-link">
+                Dashboard
+            </a>
+
+        </div>
+
+        <a href="{% url 'logout' %}" class="navbar-logout">
+            Cerrar sesión
+        </a>
+
+    </div>
+
+</nav>

@@ -1,0 +1,123 @@
+{% load static %}
+
+<!DOCTYPE html>
+
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        {% block title %}
+            Beraká | Gestión de Eventos
+        {% endblock %}
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{% static 'css/eventos.css' %}"
+    >
+
+    {% block extra_css %}
+    {% endblock %}
+
+</head>
+
+
+<body>
+
+
+<!-- =====================================================
+     NAVBAR
+===================================================== -->
+
+<nav class="navbar">
+
+    <div class="navbar-brand">
+
+        <span class="brand-small">
+            BERAKÁ
+        </span>
+
+        <span class="brand-title">
+            Hotel & Restaurante
+        </span>
+
+    </div>
+
+
+    <div class="navbar-links">
+
+        <a
+            href="{% url 'registro_eventos' %}"
+            class="nav-link"
+        >
+            Eventos
+        </a>
+
+
+        <a
+            href="{% url 'nueva_cotizacion' %}"
+            class="nav-link"
+        >
+            Nueva cotización
+        </a>
+
+
+        <a
+            href="{% url 'dashboard' %}"
+            class="nav-link"
+        >
+            Dashboard
+        </a>
+
+
+        <form
+            method="POST"
+            action="{% url 'logout' %}"
+            class="logout-form"
+        >
+
+            {% csrf_token %}
+
+            <button
+                type="submit"
+                class="logout-btn"
+            >
+                Cerrar sesión
+            </button>
+
+        </form>
+
+    </div>
+
+</nav>
+
+
+<!-- =====================================================
+     CONTENIDO
+===================================================== -->
+
+<main class="main-content">
+
+    {% block content %}
+    {% endblock %}
+
+</main>
+
+
+<script src="{% static 'js/eventos.js' %}"></script>
+
+{% block extra_js %}
+{% endblock %}
+
+
+</body>
+
+</html>

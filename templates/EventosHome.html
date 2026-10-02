@@ -1,0 +1,893 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Registro de Eventos | FERRESAL</title>
+
+    <link
+        rel="stylesheet"
+        href="{% static 'css/eventos.css' %}"
+    >
+
+</head>
+
+
+<body>
+
+
+<div class="page-container">
+
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <header class="page-header">
+
+        <div class="header-info">
+
+            <span class="brand">
+                FERRESAL
+            </span>
+
+            <h1>
+                Registro de eventos
+            </h1>
+
+            <p>
+                Consulta y administración de eventos y cotizaciones
+            </p>
+
+        </div>
+
+
+        <div class="header-actions">
+
+            <a
+                href="{% url 'dashboard' %}"
+                class="btn btn-light"
+            >
+                ← Dashboard
+            </a>
+
+           <a href="{% url 'nueva_cotizacion' %}" class="btn btn-light">
+                + Nueva cotización
+            </a>
+
+        </div>
+
+    </header>
+
+
+
+    <!-- =====================================================
+         ESTADÍSTICAS
+    ====================================================== -->
+
+    <section class="stats-grid">
+
+
+        <div class="stat-card">
+
+            <div class="stat-icon">
+                #
+            </div>
+
+            <div>
+
+                <span>
+                    Total de eventos
+                </span>
+
+                <strong>
+                    {{ total_eventos }}
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-icon pending">
+                !
+            </div>
+
+            <div>
+
+                <span>
+                    Pendientes
+                </span>
+
+                <strong>
+                    {{ pendientes }}
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-icon confirmed">
+                ✓
+            </div>
+
+            <div>
+
+                <span>
+                    Confirmados
+                </span>
+
+                <strong>
+                    {{ confirmados }}
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-icon finished">
+                ★
+            </div>
+
+            <div>
+
+                <span>
+                    Finalizados
+                </span>
+
+                <strong>
+                    {{ finalizados }}
+                </strong>
+
+            </div>
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- =====================================================
+         REGISTRO
+    ====================================================== -->
+
+    <section class="main-card">
+
+
+        <div class="section-heading">
+
+            <div>
+
+                <span class="section-label">
+                    EVENTOS
+                </span>
+
+                <h2>
+                    Registro de cotizaciones
+                </h2>
+
+                <p>
+                    Consulta todos los eventos registrados en el sistema.
+                </p>
+
+            </div>
+
+            <span class="event-count">
+                {{ total_eventos }} registros
+            </span>
+
+        </div>
+
+
+
+        <!-- =================================================
+             FILTROS
+        ================================================== -->
+
+        <div class="filters">
+
+
+            <div class="search-container">
+
+                <span class="search-icon">
+                    🔎
+                </span>
+
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Buscar cliente, evento o cotización..."
+                >
+
+            </div>
+
+
+            <select id="statusFilter">
+
+                <option value="todos">
+                    Todos los estados
+                </option>
+
+                <option value="Pendiente">
+                    Pendiente
+                </option>
+
+                <option value="Confirmado">
+                    Confirmado
+                </option>
+
+                <option value="Finalizado">
+                    Finalizado
+                </option>
+
+                <option value="Cancelado">
+                    Cancelado
+                </option>
+
+            </select>
+
+
+            <select id="typeFilter">
+
+                <option value="todos">
+                    Todos los tipos
+                </option>
+
+                <option value="Boda">
+                    Boda
+                </option>
+
+                <option value="Corporativo">
+                    Corporativo
+                </option>
+
+                <option value="Social">
+                    Social
+                </option>
+
+                <option value="Graduación">
+                    Graduación
+                </option>
+
+            </select>
+
+
+        </div>
+
+
+
+        <!-- =================================================
+             TABLA
+        ================================================== -->
+
+        <div class="table-container">
+
+            <table id="eventsTable">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            COTIZACIÓN
+                        </th>
+
+                        <th>
+                            CLIENTE
+                        </th>
+
+                        <th>
+                            EVENTO
+                        </th>
+
+                        <th>
+                            FECHA
+                        </th>
+
+                        <th>
+                            LUGAR
+                        </th>
+
+                        <th>
+                            PERSONAS
+                        </th>
+
+                        <th>
+                            ESTADO
+                        </th>
+
+                        <th>
+                            TOTAL
+                        </th>
+
+                        <th>
+                            ACCIONES
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+
+                {% for evento in eventos %}
+
+                    <tr
+                        data-status="{{ evento.estado }}"
+                        data-type="{{ evento.tipo }}"
+                    >
+
+
+                        <td>
+
+                            <span class="quotation-number">
+                                {{ evento.numero }}
+                            </span>
+
+                        </td>
+
+
+                        <td>
+
+                            <div class="client-info">
+
+                                <strong>
+                                    {{ evento.cliente }}
+                                </strong>
+
+                                <small>
+                                    {{ evento.evento }}
+                                </small>
+
+                            </div>
+
+                        </td>
+
+
+                        <td>
+
+                            <span class="event-type">
+                                {{ evento.tipo }}
+                            </span>
+
+                        </td>
+
+
+                        <td>
+
+                            <strong>
+                                {{ evento.fecha }}
+                            </strong>
+
+                            <small class="time">
+                                {{ evento.hora }}
+                            </small>
+
+                        </td>
+
+
+                        <td>
+
+                            <div class="location">
+
+                                <span>
+                                    📍
+                                </span>
+
+                                {{ evento.lugar }}
+
+                            </div>
+
+                        </td>
+
+
+                        <td>
+
+                            <span class="people">
+
+                                👥 {{ evento.personas }}
+
+                            </span>
+
+                        </td>
+
+
+                        <td>
+
+                            {% if evento.estado == "Confirmado" %}
+
+                                <span class="status confirmed-status">
+                                    ● Confirmado
+                                </span>
+
+                            {% elif evento.estado == "Pendiente" %}
+
+                                <span class="status pending-status">
+                                    ● Pendiente
+                                </span>
+
+                            {% elif evento.estado == "Finalizado" %}
+
+                                <span class="status finished-status">
+                                    ● Finalizado
+                                </span>
+
+                            {% else %}
+
+                                <span class="status cancelled-status">
+                                    ● Cancelado
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            <strong class="total">
+
+                                ${{ evento.total|floatformat:2 }}
+
+                            </strong>
+
+                        </td>
+
+
+                        <td>
+
+                            <div class="actions">
+
+
+                                <button
+                                    class="action-btn view"
+                                    title="Ver evento"
+                                    onclick="verEvento(
+                                        '{{ evento.numero }}'
+                                    )"
+                                >
+                                    👁
+                                </button>
+
+
+                                <a
+                                    href="{% url 'nueva_cotizacion' %}"
+                                    class="action-btn edit"
+                                    title="Editar"
+                                >
+                                    ✎
+                                </a>
+
+
+                                <button
+                                    class="action-btn print"
+                                    title="Imprimir"
+                                    onclick="window.print()"
+                                >
+                                    🖨
+                                </button>
+
+
+                            </div>
+
+                        </td>
+
+
+                    </tr>
+
+                {% empty %}
+
+                    <tr>
+
+                        <td
+                            colspan="9"
+                            class="empty-row"
+                        >
+
+                            No hay eventos registrados.
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+
+        <!-- =================================================
+             SIN RESULTADOS
+        ================================================== -->
+
+        <div
+            id="noResults"
+            class="no-results"
+        >
+
+            <div>
+                🔎
+            </div>
+
+            <h3>
+                No encontramos eventos
+            </h3>
+
+            <p>
+                Intenta cambiar los filtros o realizar otra búsqueda.
+            </p>
+
+        </div>
+
+
+    </section>
+
+
+</div>
+
+
+
+<!-- =====================================================
+     MODAL TEMPORAL
+====================================================== -->
+
+<div
+    id="eventModal"
+    class="modal-overlay"
+>
+
+
+    <div class="modal">
+
+
+        <button
+            class="modal-close"
+            onclick="cerrarModal()"
+        >
+            ×
+        </button>
+
+
+        <span class="section-label">
+            DETALLE DEL EVENTO
+        </span>
+
+
+        <h2 id="modalTitle">
+            Evento
+        </h2>
+
+
+        <div class="modal-content">
+
+            <div class="modal-item">
+
+                <span>
+                    Número de cotización
+                </span>
+
+                <strong id="modalQuotation">
+                    -
+                </strong>
+
+            </div>
+
+
+            <div class="modal-item">
+
+                <span>
+                    Cliente
+                </span>
+
+                <strong id="modalClient">
+                    -
+                </strong>
+
+            </div>
+
+
+            <div class="modal-item">
+
+                <span>
+                    Evento
+                </span>
+
+                <strong id="modalEvent">
+                    -
+                </strong>
+
+            </div>
+
+
+            <div class="modal-item">
+
+                <span>
+                    Fecha
+                </span>
+
+                <strong id="modalDate">
+                    -
+                </strong>
+
+            </div>
+
+
+            <div class="modal-item">
+
+                <span>
+                    Lugar
+                </span>
+
+                <strong id="modalPlace">
+                    -
+                </strong>
+
+            </div>
+
+
+        </div>
+
+
+        <div class="modal-footer">
+
+            <button
+                class="btn btn-gold"
+                onclick="cerrarModal()"
+            >
+                Cerrar
+            </button>
+
+        </div>
+
+
+    </div>
+
+</div>
+
+
+
+<script>
+
+    const searchInput =
+        document.getElementById("searchInput");
+
+    const statusFilter =
+        document.getElementById("statusFilter");
+
+    const typeFilter =
+        document.getElementById("typeFilter");
+
+    const tableRows =
+        document.querySelectorAll("#eventsTable tbody tr");
+
+    const noResults =
+        document.getElementById("noResults");
+
+
+    function filtrarEventos() {
+
+        const search =
+            searchInput.value
+                .toLowerCase()
+                .trim();
+
+        const status =
+            statusFilter.value;
+
+        const type =
+            typeFilter.value;
+
+
+        let visibles = 0;
+
+
+        tableRows.forEach(row => {
+
+            if (!row.dataset.status) {
+                return;
+            }
+
+
+            const text =
+                row.innerText.toLowerCase();
+
+
+            const rowStatus =
+                row.dataset.status;
+
+
+            const rowType =
+                row.dataset.type;
+
+
+            const matchesSearch =
+                text.includes(search);
+
+
+            const matchesStatus =
+                status === "todos" ||
+                rowStatus === status;
+
+
+            const matchesType =
+                type === "todos" ||
+                rowType === type;
+
+
+            if (
+                matchesSearch &&
+                matchesStatus &&
+                matchesType
+            ) {
+
+                row.style.display = "";
+
+                visibles++;
+
+            } else {
+
+                row.style.display = "none";
+
+            }
+
+        });
+
+
+        if (visibles === 0) {
+
+            noResults.classList.add("show");
+
+        } else {
+
+            noResults.classList.remove("show");
+
+        }
+
+    }
+
+
+    searchInput.addEventListener(
+        "input",
+        filtrarEventos
+    );
+
+
+    statusFilter.addEventListener(
+        "change",
+        filtrarEventos
+    );
+
+
+    typeFilter.addEventListener(
+        "change",
+        filtrarEventos
+    );
+
+
+
+    function verEvento(numero) {
+
+        const rows =
+            document.querySelectorAll(
+                "#eventsTable tbody tr"
+            );
+
+
+        rows.forEach(row => {
+
+            if (
+                row.innerText.includes(numero)
+            ) {
+
+                const cells =
+                    row.querySelectorAll("td");
+
+
+                document.getElementById(
+                    "modalQuotation"
+                ).textContent =
+                    cells[0].innerText.trim();
+
+
+                document.getElementById(
+                    "modalClient"
+                ).textContent =
+                    cells[1]
+                        .querySelector("strong")
+                        .innerText;
+
+
+                document.getElementById(
+                    "modalEvent"
+                ).textContent =
+                    cells[1]
+                        .querySelector("small")
+                        .innerText;
+
+
+                document.getElementById(
+                    "modalDate"
+                ).textContent =
+                    cells[3].innerText.trim();
+
+
+                document.getElementById(
+                    "modalPlace"
+                ).textContent =
+                    cells[4].innerText.trim();
+
+
+                document.getElementById(
+                    "modalTitle"
+                ).textContent =
+                    cells[1]
+                        .querySelector("small")
+                        .innerText;
+
+
+                document.getElementById(
+                    "eventModal"
+                ).classList.add("show");
+
+            }
+
+        });
+
+    }
+
+
+    function cerrarModal() {
+
+        document.getElementById(
+            "eventModal"
+        ).classList.remove("show");
+
+    }
+
+
+    document.getElementById(
+        "eventModal"
+    ).addEventListener(
+        "click",
+        function(event) {
+
+            if (event.target === this) {
+
+                cerrarModal();
+
+            }
+
+        }
+    );
+
+</script>
+
+
+</body>
+
+</html>

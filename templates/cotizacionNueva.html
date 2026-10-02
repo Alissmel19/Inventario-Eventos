@@ -1,0 +1,999 @@
+{% extends "base_eventos.html" %}
+
+{% load static %}
+
+
+{% block title %}
+    Nueva Cotización | Beraká
+{% endblock %}
+
+
+{% block extra_css %}
+
+<link
+    rel="stylesheet"
+    href="{% static 'css/cotizacion.css' %}"
+>
+
+{% endblock %}
+
+
+{% block content %}
+
+
+<!-- =====================================================
+     HEADER
+===================================================== -->
+
+<section class="quote-header">
+
+    <div>
+
+        <span class="eyebrow">
+            BERAKÁ · COTIZACIONES
+        </span>
+
+        <h1>
+            Nueva cotización
+        </h1>
+
+        <p>
+            Crea una propuesta completa para tu cliente.
+        </p>
+
+    </div>
+
+
+    <div class="quote-actions">
+
+        <a
+            href="{% url 'registro_eventos' %}"
+            class="btn btn-light"
+        >
+            ← Eventos
+        </a>
+
+
+        <button
+            type="button"
+            class="btn btn-gold"
+            onclick="window.print()"
+        >
+            Imprimir
+        </button>
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     CLIENTE
+===================================================== -->
+
+<section class="quote-card">
+
+    <div class="section-title">
+
+        <span class="section-number">
+            01
+        </span>
+
+        <div>
+
+            <h2>
+                Información del cliente
+            </h2>
+
+            <p>
+                Datos de la persona o empresa.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="form-grid">
+
+        <div class="form-group">
+
+            <label>
+                Nombre del cliente *
+            </label>
+
+            <input
+                type="text"
+                id="cliente"
+                placeholder="Ej. María López"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                Teléfono
+            </label>
+
+            <input
+                type="text"
+                id="telefono"
+                placeholder="0000-0000"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                Correo electrónico
+            </label>
+
+            <input
+                type="email"
+                id="correo"
+                placeholder="cliente@correo.com"
+            >
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     EVENTO
+===================================================== -->
+
+<section class="quote-card">
+
+    <div class="section-title">
+
+        <span class="section-number">
+            02
+        </span>
+
+        <div>
+
+            <h2>
+                Información del evento
+            </h2>
+
+            <p>
+                Cuándo, dónde y para cuántas personas.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="form-grid">
+
+
+        <div class="form-group">
+
+            <label>
+                Tipo de evento *
+            </label>
+
+            <select id="tipoEvento">
+
+                <option value="">
+                    Seleccionar tipo
+                </option>
+
+                {% for tipo in tipos_evento %}
+
+                <option value="{{ tipo }}">
+                    {{ tipo }}
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                Fecha del evento *
+            </label>
+
+            <input
+                type="date"
+                id="fechaEvento"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                Hora de inicio
+            </label>
+
+            <input
+                type="time"
+                id="horaInicio"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                Hora de finalización
+            </label>
+
+            <input
+                type="time"
+                id="horaFin"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                Cantidad de personas *
+            </label>
+
+            <input
+                type="number"
+                id="personas"
+                min="1"
+                value="50"
+                oninput="actualizarPersonas()"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                Lugar del evento *
+            </label>
+
+            <select id="lugarEvento">
+
+                <option value="">
+                    Seleccione el lugar
+                </option>
+
+                {% for lugar in lugares %}
+
+                <option value="{{ lugar }}">
+                    {{ lugar }}
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+        </div>
+
+
+        <div class="form-group full">
+
+            <label>
+                Dirección del evento
+            </label>
+
+            <textarea
+                id="direccionEvento"
+                rows="2"
+                placeholder="Dirección completa..."
+            ></textarea>
+
+        </div>
+
+
+        <div class="form-group full">
+
+            <label>
+                Observaciones
+            </label>
+
+            <textarea
+                id="observaciones"
+                rows="3"
+                placeholder="Información adicional del evento..."
+            ></textarea>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     PAQUETE
+===================================================== -->
+
+<section class="quote-card">
+
+    <div class="section-title">
+
+        <span class="section-number">
+            03
+        </span>
+
+        <div>
+
+            <h2>
+                Paquete para el evento
+            </h2>
+
+            <p>
+                Selecciona la propuesta comercial.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="package-selector">
+
+        {% for paquete in paquetes %}
+
+        <label class="package-option">
+
+            <input
+                type="radio"
+                name="paquete"
+                value="{{ paquete.id }}"
+                onchange="seleccionarPaquete('{{ paquete.id }}')"
+            >
+
+            <div>
+
+                <span>
+                    {{ paquete.subtitulo }}
+                </span>
+
+                <h3>
+                    {{ paquete.nombre }}
+                </h3>
+
+                <p>
+                    {{ paquete.descripcion }}
+                </p>
+
+            </div>
+
+        </label>
+
+        {% endfor %}
+
+    </div>
+
+
+    <div
+        id="packageInfo"
+        class="package-selected"
+    >
+
+        Selecciona un paquete para ver su información.
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     CATÁLOGO
+===================================================== -->
+
+<section class="quote-card">
+
+    <div class="section-title">
+
+        <span class="section-number">
+            04
+        </span>
+
+        <div>
+
+            <h2>
+                Catálogo de servicios
+            </h2>
+
+            <p>
+                Agrega conceptos a la cotización.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="catalog-toolbar">
+
+        <input
+            type="text"
+            id="buscarConcepto"
+            placeholder="Buscar concepto..."
+            onkeyup="filtrarCatalogo()"
+        >
+
+
+        <select
+            id="categoryFilter"
+            onchange="filtrarCatalogo()"
+        >
+
+            <option value="todas">
+                Todas las categorías
+            </option>
+
+            {% for categoria in categorias %}
+
+            <option value="{{ categoria }}">
+                {{ categoria }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </div>
+
+
+    <div class="catalog-grid">
+
+
+        {% for item in catalogo %}
+
+        <article
+            class="catalog-item"
+            data-nombre="{{ item.nombre|lower }}"
+            data-tipo="{{ item.tipo }}"
+        >
+
+            <span class="catalog-category">
+                {{ item.tipo }}
+            </span>
+
+
+            <h3>
+                {{ item.nombre }}
+            </h3>
+
+
+            <p>
+                ${{ item.precio|floatformat:2 }}
+                / {{ item.unidad }}
+            </p>
+
+
+            <button
+                type="button"
+                onclick="agregarConcepto(
+                    '{{ item.nombre|escapejs }}',
+                    '{{ item.tipo|escapejs }}',
+                    '{{ item.precio }}',
+                    '{{ item.unidad|escapejs }}'
+                )"
+            >
+                + Agregar
+            </button>
+
+        </article>
+
+        {% endfor %}
+
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     VARIABLES
+===================================================== -->
+
+<section class="quote-card">
+
+    <div class="section-title">
+
+        <span class="section-number">
+            05
+        </span>
+
+        <div>
+
+            <h2>
+                Servicios opcionales
+            </h2>
+
+            <p>
+                Servicios adicionales para el evento.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="variables-grid">
+
+
+        {% for item in variables %}
+
+        <article class="variable-card">
+
+            <div>
+
+                <span class="catalog-category">
+                    OPCIONAL
+                </span>
+
+                <h3>
+                    {{ item.nombre }}
+                </h3>
+
+                <p>
+                    {{ item.descripcion }}
+                </p>
+
+                <strong>
+                    ${{ item.precio|floatformat:2 }}
+                    / {{ item.unidad }}
+                </strong>
+
+            </div>
+
+
+            <button
+                type="button"
+                onclick="agregarVariable(
+                    '{{ item.nombre|escapejs }}',
+                    '{{ item.precio }}',
+                    '{{ item.unidad|escapejs }}'
+                )"
+            >
+                + Agregar
+            </button>
+
+        </article>
+
+        {% endfor %}
+
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     DETALLE
+===================================================== -->
+
+<section class="quote-card">
+
+    <div class="section-title">
+
+        <span class="section-number">
+            06
+        </span>
+
+        <div>
+
+            <h2>
+                Detalle de la cotización
+            </h2>
+
+            <p>
+                Conceptos agregados.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="table-wrapper">
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        Concepto
+                    </th>
+
+                    <th>
+                        Cantidad
+                    </th>
+
+                    <th>
+                        Unidad
+                    </th>
+
+                    <th>
+                        Costo p/p
+                    </th>
+
+                    <th>
+                        Total
+                    </th>
+
+                    <th>
+                    </th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody id="cotizacionBody">
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+    <div
+        id="emptyMessage"
+        class="empty-message"
+    >
+        Aún no has agregado ningún concepto.
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     RESUMEN
+===================================================== -->
+
+<section class="summary-card">
+
+
+    <div class="summary-header">
+
+        RESUMEN DE COTIZACIÓN
+
+    </div>
+
+
+    <div class="summary-row">
+
+        <span>
+            Subtotal
+        </span>
+
+        <strong id="subtotal">
+            $0.00
+        </strong>
+
+    </div>
+
+
+    <div class="summary-row">
+
+        <span>
+            Descuento
+        </span>
+
+        <div class="input-money">
+
+            <span>
+                $
+            </span>
+
+            <input
+                type="number"
+                id="descuento"
+                value="0"
+                min="0"
+                step="0.01"
+                oninput="calcularTotales()"
+            >
+
+        </div>
+
+    </div>
+
+
+    <div class="summary-row">
+
+        <span>
+            Propina
+        </span>
+
+        <div class="input-percentage">
+
+            <input
+                type="number"
+                id="propina"
+                value="10"
+                min="0"
+                step="0.01"
+                oninput="calcularTotales()"
+            >
+
+            <span>
+                %
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div class="summary-row">
+
+        <span>
+            IVA
+        </span>
+
+        <div class="input-percentage">
+
+            <input
+                type="number"
+                id="iva"
+                value="13"
+                min="0"
+                step="0.01"
+                oninput="calcularTotales()"
+            >
+
+            <span>
+                %
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div class="summary-row">
+
+        <span>
+            Base imponible
+        </span>
+
+        <strong id="baseImponible">
+            $0.00
+        </strong>
+
+    </div>
+
+
+    <div class="summary-row">
+
+        <span>
+            Monto propina
+        </span>
+
+        <strong id="montoPropina">
+            $0.00
+        </strong>
+
+    </div>
+
+
+    <div class="summary-row">
+
+        <span>
+            Monto IVA
+        </span>
+
+        <strong id="montoIVA">
+            $0.00
+        </strong>
+
+    </div>
+
+
+    <div class="total-row">
+
+        <span>
+            TOTAL
+        </span>
+
+        <strong id="total">
+            $0.00
+        </strong>
+
+    </div>
+
+
+    <div class="per-person">
+
+        <span>
+            Costo por persona
+        </span>
+
+        <strong id="costoPersona">
+            $0.00
+        </strong>
+
+    </div>
+
+
+</section>
+
+
+<!-- =====================================================
+     CONDICIONES
+===================================================== -->
+
+<section class="quote-card">
+
+    <div class="section-title">
+
+        <span class="section-number">
+            07
+        </span>
+
+        <div>
+
+            <h2>
+                Condiciones de la cotización
+            </h2>
+
+            <p>
+                Información comercial.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="form-grid">
+
+
+        <div class="form-group">
+
+            <label>
+                Forma de pago
+            </label>
+
+            <select id="formaPago">
+
+                <option>
+                    Transferencia bancaria
+                </option>
+
+                <option>
+                    Depósito bancario
+                </option>
+
+                <option>
+                    Efectivo
+                </option>
+
+                <option>
+                    Tarjeta
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                Anticipo requerido
+            </label>
+
+            <input
+                type="number"
+                id="anticipo"
+                min="0"
+                placeholder="Ej. 50%"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                Vigencia
+            </label>
+
+            <input
+                type="text"
+                value="15 días"
+                id="vigencia"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                Fecha límite de confirmación
+            </label>
+
+            <input
+                type="date"
+                id="fechaLimite"
+            >
+
+        </div>
+
+
+        <div class="form-group full">
+
+            <label>
+                Condiciones / notas
+            </label>
+
+            <textarea
+                id="condiciones"
+                rows="4"
+                placeholder="Condiciones especiales..."
+            ></textarea>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     BOTONES
+===================================================== -->
+
+<div class="bottom-actions">
+
+    <a
+        href="{% url 'registro_eventos' %}"
+        class="btn btn-light"
+    >
+        Cancelar
+    </a>
+
+
+    <button
+        type="button"
+        class="btn btn-outline"
+        onclick="window.print()"
+    >
+        Vista previa
+    </button>
+
+
+    <button
+        type="button"
+        class="btn btn-gold"
+        onclick="generarCotizacion()"
+    >
+        Generar cotización
+    </button>
+
+</div>
+
+
+{% endblock %}
+
+
+{% block extra_js %}
+
+<script src="{% static 'js/cotizacion.js' %}"></script>
+
+{% endblock %}
