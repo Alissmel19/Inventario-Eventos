@@ -350,3 +350,191 @@ class TiposMesa(models.Model):
     class Meta:
         managed = False
         db_table = 'tipos_mesa'
+
+
+# ============================================================
+# PAQUETES DE EVENTOS
+# ============================================================
+
+class PaquetesEvento(models.Model):
+
+    id_paquete = models.AutoField(
+        primary_key=True
+    )
+
+    tipo_evento = models.ForeignKey(
+        "TiposEvento",
+        on_delete=models.PROTECT,
+        related_name="paquetes"
+    )
+
+    nombre = models.CharField(
+        max_length=150
+    )
+
+    descripcion = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    precio_base = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
+    cantidad_personas_base = models.PositiveIntegerField(
+        default=1
+    )
+
+    activo = models.BooleanField(
+        default=True
+    )
+
+    fecha_creacion = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+
+        db_table = "paquetes_evento"
+
+        ordering = ["nombre"]
+
+    def __str__(self):
+        return self.nombre
+
+
+# ============================================================
+# PRODUCTOS DEL PAQUETE
+# ============================================================
+
+class PaqueteProductos(models.Model):
+
+    id_paquete_producto = models.AutoField(
+        primary_key=True
+    )
+
+    paquete = models.ForeignKey(
+        PaquetesEvento,
+        on_delete=models.CASCADE,
+        related_name="productos"
+    )
+
+    producto = models.ForeignKey(
+        "ProductosEvento",
+        on_delete=models.PROTECT,
+        related_name="paquetes"
+    )
+
+    cantidad = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=1
+    )
+
+    obligatorio = models.BooleanField(
+        default=True
+    )
+
+    class Meta:
+
+        db_table = "paquete_productos"
+
+        unique_together = (
+            "paquete",
+            "producto",
+        )
+
+    def __str__(self):
+        return f"{self.paquete.nombre} - {self.producto.nombre}"
+
+
+# ============================================================
+# SERVICIOS DEL PAQUETE
+# ============================================================
+
+class PaqueteServicios(models.Model):
+
+    id_paquete_servicio = models.AutoField(
+        primary_key=True
+    )
+
+    paquete = models.ForeignKey(
+        PaquetesEvento,
+        on_delete=models.CASCADE,
+        related_name="servicios"
+    )
+
+    servicio = models.ForeignKey(
+        "Servicios",
+        on_delete=models.PROTECT,
+        related_name="paquetes"
+    )
+
+    cantidad = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=1
+    )
+
+    obligatorio = models.BooleanField(
+        default=True
+    )
+
+    class Meta:
+
+        db_table = "paquete_servicios"
+
+        unique_together = (
+            "paquete",
+            "servicio",
+        )
+
+    def __str__(self):
+        return f"{self.paquete.nombre} - {self.servicio.nombre}"
+
+
+# ============================================================
+# MONTAJE DEL PAQUETE
+# ============================================================
+
+class PaqueteMontaje(models.Model):
+
+    id_paquete_montaje = models.AutoField(
+        primary_key=True
+    )
+
+    paquete = models.ForeignKey(
+        PaquetesEvento,
+        on_delete=models.CASCADE,
+        related_name="montajes"
+    )
+
+    elemento = models.ForeignKey(
+        "ElementosMontaje",
+        on_delete=models.PROTECT,
+        related_name="paquetes"
+    )
+
+    cantidad = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=1
+    )
+
+    obligatorio = models.BooleanField(
+        default=True
+    )
+
+    class Meta:
+
+        db_table = "paquete_montaje"
+
+        unique_together = (
+            "paquete",
+            "elemento",
+        )
+
+    def __str__(self):
+        return f"{self.paquete.nombre} - {self.elemento.nombre}"
