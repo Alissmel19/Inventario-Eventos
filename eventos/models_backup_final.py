@@ -1,4 +1,4 @@
-# This is an auto-generated Django model module.
+﻿# This is an auto-generated Django model module.
 # You'll have to do the following manually to clean this up:
 #   * Rearrange models' order
 #   * Make sure each model has one field with primary_key=True
@@ -6,18 +6,6 @@
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
-
-
-class Adicionales(models.Model):
-    id_adicional = models.IntegerField(primary_key=True)
-    nombre = models.CharField(max_length=100)
-    descripcion = models.CharField(max_length=200, blank=True, null=True)
-    precio = models.DecimalField(max_digits=10, decimal_places=2)
-    activo = models.BooleanField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'adicionales'
 
 
 class AreasEvento(models.Model):
@@ -30,88 +18,6 @@ class AreasEvento(models.Model):
     class Meta:
         managed = False
         db_table = 'areas_evento'
-
-
-class AuthGroup(models.Model):
-    name = models.CharField(unique=True, max_length=150)
-
-    class Meta:
-        managed = False
-        db_table = 'auth_group'
-
-
-class AuthGroupPermissions(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    group = models.ForeignKey(AuthGroup, models.DO_NOTHING)
-    permission = models.ForeignKey('AuthPermission', models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'auth_group_permissions'
-        unique_together = (('group', 'permission'),)
-
-
-class AuthPermission(models.Model):
-    name = models.CharField(max_length=255)
-    content_type = models.ForeignKey('DjangoContentType', models.DO_NOTHING)
-    codename = models.CharField(max_length=100)
-
-    class Meta:
-        managed = False
-        db_table = 'auth_permission'
-        unique_together = (('content_type', 'codename'),)
-
-
-class AuthUser(models.Model):
-    password = models.CharField(max_length=128)
-    last_login = models.DateTimeField(blank=True, null=True)
-    is_superuser = models.BooleanField()
-    username = models.CharField(unique=True, max_length=150)
-    first_name = models.CharField(max_length=150)
-    last_name = models.CharField(max_length=150)
-    email = models.CharField(max_length=254)
-    is_staff = models.BooleanField()
-    is_active = models.BooleanField()
-    date_joined = models.DateTimeField()
-
-    class Meta:
-        managed = False
-        db_table = 'auth_user'
-
-
-class AuthUserGroups(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    user = models.ForeignKey(AuthUser, models.DO_NOTHING)
-    group = models.ForeignKey(AuthGroup, models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'auth_user_groups'
-        unique_together = (('user', 'group'),)
-
-
-class AuthUserUserPermissions(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    user = models.ForeignKey(AuthUser, models.DO_NOTHING)
-    permission = models.ForeignKey(AuthPermission, models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'auth_user_user_permissions'
-        unique_together = (('user', 'permission'),)
-
-
-class Bebidas(models.Model):
-    id_bebida = models.IntegerField(primary_key=True)
-    nombre = models.CharField(max_length=200, blank=True, null=True)
-    descripcion = models.CharField(max_length=200, blank=True, null=True)
-    ingredientes = models.CharField(max_length=200, blank=True, null=True)
-    precio = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    categoria = models.ForeignKey('CategoriasItem', models.DO_NOTHING, blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'bebidas'
 
 
 class CategoriasItem(models.Model):
@@ -139,14 +45,18 @@ class Clientes(models.Model):
         db_table = 'clientes'
 
 
-class Cortesia(models.Model):
-    id_cortesia = models.IntegerField(primary_key=True)
-    nombre = models.CharField(max_length=100, blank=True, null=True)
-    descripcion = models.CharField(max_length=100, blank=True, null=True)
+class ConfirmacionesEvento(models.Model):
+    confirmacion_id = models.AutoField(primary_key=True)
+    evento = models.ForeignKey('Eventos', models.DB_CASCADE)
+    concepto = models.CharField(max_length=150)
+    respuesta = models.CharField(max_length=250, blank=True, null=True)
+    fecha_confirmacion = models.DateField(blank=True, null=True)
+    confirmado_por = models.CharField(max_length=150, blank=True, null=True)
+    observaciones = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = False
-        db_table = 'cortesia'
+        db_table = 'confirmaciones_evento'
 
 
 class Cotizaciones(models.Model):
@@ -182,22 +92,28 @@ class DecoracionesEvento(models.Model):
         db_table = 'decoraciones_evento'
 
 
-class DetalleHospedaje(models.Model):
-    id_detalle_hospedaje = models.IntegerField(primary_key=True)
-    check_in = models.TimeField(blank=True, null=True)
-    check_out = models.TimeField(blank=True, null=True)
-    id_hospedaje = models.ForeignKey('Hospedaje', models.DO_NOTHING, db_column='id_hospedaje', blank=True, null=True)
-    id_habitaciones = models.ForeignKey('Habitaciones', models.DO_NOTHING, db_column='id_habitaciones', blank=True, null=True)
+class DetalleCotizacion(models.Model):
+    detalle_cotizacion_id = models.AutoField(primary_key=True)
+    cotizacion = models.ForeignKey(Cotizaciones, models.DB_CASCADE)
+    producto_evento = models.ForeignKey('ProductosEvento', models.DO_NOTHING, blank=True, null=True)
+    elemento_montaje = models.ForeignKey('ElementosMontaje', models.DO_NOTHING, blank=True, null=True)
+    concepto = models.CharField(max_length=250)
+    descripcion = models.TextField(blank=True, null=True)
+    cantidad = models.DecimalField(max_digits=12, decimal_places=2)
+    unidad = models.CharField(max_length=50, blank=True, null=True)
+    precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
+    observaciones = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = False
-        db_table = 'detalle_hospedaje'
+        db_table = 'detalle_cotizacion'
 
 
 class DetallesEvento(models.Model):
     detalle_evento_id = models.AutoField(primary_key=True)
     evento = models.ForeignKey('Eventos', models.DB_CASCADE)
-    producto_evento_id = models.IntegerField()
+    producto_evento = models.ForeignKey('ProductosEvento', models.DO_NOTHING)
     cantidad = models.DecimalField(max_digits=12, decimal_places=2)
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
@@ -206,51 +122,6 @@ class DetallesEvento(models.Model):
     class Meta:
         managed = False
         db_table = 'detalles_evento'
-
-
-class DjangoAdminLog(models.Model):
-    action_time = models.DateTimeField()
-    object_id = models.TextField(blank=True, null=True)
-    object_repr = models.CharField(max_length=200)
-    action_flag = models.SmallIntegerField()
-    change_message = models.TextField()
-    content_type = models.ForeignKey('DjangoContentType', models.DO_NOTHING, blank=True, null=True)
-    user = models.ForeignKey(AuthUser, models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'django_admin_log'
-
-
-class DjangoContentType(models.Model):
-    app_label = models.CharField(max_length=100)
-    model = models.CharField(max_length=100)
-
-    class Meta:
-        managed = False
-        db_table = 'django_content_type'
-        unique_together = (('app_label', 'model'),)
-
-
-class DjangoMigrations(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    app = models.CharField(max_length=255)
-    name = models.CharField(max_length=255)
-    applied = models.DateTimeField()
-
-    class Meta:
-        managed = False
-        db_table = 'django_migrations'
-
-
-class DjangoSession(models.Model):
-    session_key = models.CharField(primary_key=True, max_length=40)
-    session_data = models.TextField()
-    expire_date = models.DateTimeField()
-
-    class Meta:
-        managed = False
-        db_table = 'django_session'
 
 
 class ElementosMontaje(models.Model):
@@ -280,11 +151,11 @@ class Empleados(models.Model):
 
 class EstacionesEvento(models.Model):
     estacion_id = models.AutoField(primary_key=True)
+    evento = models.ForeignKey('Eventos', models.DB_CASCADE)
     tipo = models.CharField(max_length=100)
     ubicacion = models.CharField(max_length=250, blank=True, null=True)
     descripcion = models.TextField(blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
-    nombre = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -322,28 +193,18 @@ class Eventos(models.Model):
         db_table = 'eventos'
 
 
-class Habitaciones(models.Model):
-    id_habitaciones = models.IntegerField(primary_key=True)
-    nombre = models.CharField(max_length=100, blank=True, null=True)
-    descripcion = models.CharField(max_length=100, blank=True, null=True)
-    capacidad = models.IntegerField(blank=True, null=True)
-    servicios_incluidos = models.CharField(max_length=200, blank=True, null=True)
-    precio = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+class MesasEvento(models.Model):
+    mesa_evento_id = models.AutoField(primary_key=True)
+    evento = models.ForeignKey(Eventos, models.DB_CASCADE)
+    tipo_mesa = models.ForeignKey('TiposMesa', models.DO_NOTHING)
+    cantidad = models.IntegerField()
+    personas_por_mesa = models.IntegerField(blank=True, null=True)
+    ubicacion = models.CharField(max_length=150, blank=True, null=True)
+    observaciones = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = False
-        db_table = 'habitaciones'
-
-
-class Hospedaje(models.Model):
-    id_hospedaje = models.IntegerField(primary_key=True)
-    total = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    fecha = models.DateTimeField(blank=True, null=True)
-    cliente = models.ForeignKey(Clientes, models.DO_NOTHING, blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'hospedaje'
+        db_table = 'mesas_evento'
 
 
 class MetodosPago(models.Model):
@@ -373,6 +234,18 @@ class MontajesEvento(models.Model):
         db_table = 'montajes_evento'
 
 
+class ObservacionesEvento(models.Model):
+    observacion_id = models.AutoField(primary_key=True)
+    evento = models.ForeignKey(Eventos, models.DB_CASCADE)
+    tipo = models.CharField(max_length=100, blank=True, null=True)
+    descripcion = models.TextField()
+    fecha_registro = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = 'observaciones_evento'
+
+
 class Pagos(models.Model):
     pago_id = models.AutoField(primary_key=True)
     evento = models.ForeignKey(Eventos, models.DO_NOTHING)
@@ -389,40 +262,32 @@ class Pagos(models.Model):
         db_table = 'pagos'
 
 
-class PaquetesEvento(models.Model):
-    id_paquete = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=200)
+class PendientesEvento(models.Model):
+    pendiente_id = models.AutoField(primary_key=True)
+    evento = models.ForeignKey(Eventos, models.DB_CASCADE)
+    descripcion = models.CharField(max_length=250)
+    responsable = models.CharField(max_length=150, blank=True, null=True)
+    fecha_limite = models.DateField(blank=True, null=True)
+    estado = models.CharField(max_length=50)
+    fecha_completado = models.DateField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'pendientes_evento'
+
+
+class ProductosEvento(models.Model):
+    producto_evento_id = models.AutoField(primary_key=True)
+    categoria = models.ForeignKey(CategoriasItem, models.DO_NOTHING)
+    nombre = models.CharField(max_length=150)
     descripcion = models.TextField(blank=True, null=True)
-    min_personas = models.IntegerField(blank=True, null=True)
-    que_incluye = models.TextField(blank=True, null=True)
-    modalidad_pago = models.TextField(blank=True, null=True)
+    unidad_medida = models.CharField(max_length=50, blank=True, null=True)
+    precio_base = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    estado = models.BooleanField()
 
     class Meta:
         managed = False
-        db_table = 'paquetes_evento'
-
-
-class Platillo(models.Model):
-    id_platillo = models.IntegerField(primary_key=True)
-    nombre = models.CharField(max_length=100, blank=True, null=True)
-    descripcion = models.CharField(max_length=300, blank=True, null=True)
-    ingredientes = models.CharField(max_length=200, blank=True, null=True)
-    precio = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    categoria = models.ForeignKey(CategoriasItem, models.DO_NOTHING, blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'platillo'
-
-
-class PlatilloAdicional(models.Model):
-    pk = models.CompositePrimaryKey('id_platillo', 'id_adicional')
-    id_platillo = models.ForeignKey(Platillo, models.DO_NOTHING, db_column='id_platillo')
-    id_adicional = models.ForeignKey(Adicionales, models.DO_NOTHING, db_column='id_adicional')
-
-    class Meta:
-        managed = False
-        db_table = 'platillo_adicional'
+        db_table = 'productos_evento'
 
 
 class Proveedores(models.Model):
@@ -440,39 +305,29 @@ class Proveedores(models.Model):
 
 
 class Servicios(models.Model):
-    id_servicio = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100)
-    descripcion = models.CharField(max_length=300, blank=True, null=True)
-    precio = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    estado = models.BooleanField(blank=True, null=True)
-    id_paquete = models.ForeignKey(PaquetesEvento, models.DO_NOTHING, db_column='id_paquete', blank=True, null=True)
+    servicio_id = models.AutoField(primary_key=True)
+    nombre = models.CharField(unique=True, max_length=150)
+    descripcion = models.TextField(blank=True, null=True)
+    precio_base = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    estado = models.BooleanField()
 
     class Meta:
         managed = False
         db_table = 'servicios'
 
 
-class ServiciosAdicionales(models.Model):
-    id_servicio_adicional = models.IntegerField(primary_key=True)
-    nombre = models.CharField(max_length=100, blank=True, null=True)
-    descripcion = models.CharField(max_length=100, blank=True, null=True)
-    precio = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+class ServiciosProveedorEvento(models.Model):
+    servicio_proveedor_id = models.AutoField(primary_key=True)
+    evento = models.ForeignKey(Eventos, models.DB_CASCADE)
+    proveedor = models.ForeignKey(Proveedores, models.DO_NOTHING)
+    servicio = models.ForeignKey(Servicios, models.DO_NOTHING)
+    costo = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    estado = models.CharField(max_length=50)
+    observaciones = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = False
-        db_table = 'servicios_adicionales'
-
-
-class ServiciosOpcionales(models.Model):
-    id_servicio_opcional = models.IntegerField(primary_key=True)
-    nombre = models.CharField(max_length=100, blank=True, null=True)
-    descripcion = models.TextField(blank=True, null=True)
-    precio = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    medida = models.CharField(max_length=100, blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'servicios_opcionales'
+        db_table = 'servicios_proveedor_evento'
 
 
 class TiposEvento(models.Model):
@@ -495,3 +350,191 @@ class TiposMesa(models.Model):
     class Meta:
         managed = False
         db_table = 'tipos_mesa'
+
+
+# ============================================================
+# PAQUETES DE EVENTOS
+# ============================================================
+
+class PaquetesEvento(models.Model):
+
+    id_paquete = models.AutoField(
+        primary_key=True
+    )
+
+    tipo_evento = models.ForeignKey(
+        "TiposEvento",
+        on_delete=models.PROTECT,
+        related_name="paquetes"
+    )
+
+    nombre = models.CharField(
+        max_length=150
+    )
+
+    descripcion = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    precio_base = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
+    cantidad_personas_base = models.PositiveIntegerField(
+        default=1
+    )
+
+    activo = models.BooleanField(
+        default=True
+    )
+
+    fecha_creacion = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+
+        db_table = "paquetes_evento"
+
+        ordering = ["nombre"]
+
+    def __str__(self):
+        return self.nombre
+
+
+# ============================================================
+# PRODUCTOS DEL PAQUETE
+# ============================================================
+
+class PaqueteProductos(models.Model):
+
+    id_paquete_producto = models.AutoField(
+        primary_key=True
+    )
+
+    paquete = models.ForeignKey(
+        PaquetesEvento,
+        on_delete=models.CASCADE,
+        related_name="productos"
+    )
+
+    producto = models.ForeignKey(
+        "ProductosEvento",
+        on_delete=models.PROTECT,
+        related_name="paquetes"
+    )
+
+    cantidad = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=1
+    )
+
+    obligatorio = models.BooleanField(
+        default=True
+    )
+
+    class Meta:
+
+        db_table = "paquete_productos"
+
+        unique_together = (
+            "paquete",
+            "producto",
+        )
+
+    def __str__(self):
+        return f"{self.paquete.nombre} - {self.producto.nombre}"
+
+
+# ============================================================
+# SERVICIOS DEL PAQUETE
+# ============================================================
+
+class PaqueteServicios(models.Model):
+
+    id_paquete_servicio = models.AutoField(
+        primary_key=True
+    )
+
+    paquete = models.ForeignKey(
+        PaquetesEvento,
+        on_delete=models.CASCADE,
+        related_name="servicios"
+    )
+
+    servicio = models.ForeignKey(
+        "Servicios",
+        on_delete=models.PROTECT,
+        related_name="paquetes"
+    )
+
+    cantidad = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=1
+    )
+
+    obligatorio = models.BooleanField(
+        default=True
+    )
+
+    class Meta:
+
+        db_table = "paquete_servicios"
+
+        unique_together = (
+            "paquete",
+            "servicio",
+        )
+
+    def __str__(self):
+        return f"{self.paquete.nombre} - {self.servicio.nombre}"
+
+
+# ============================================================
+# MONTAJE DEL PAQUETE
+# ============================================================
+
+class PaqueteMontaje(models.Model):
+
+    id_paquete_montaje = models.AutoField(
+        primary_key=True
+    )
+
+    paquete = models.ForeignKey(
+        PaquetesEvento,
+        on_delete=models.CASCADE,
+        related_name="montajes"
+    )
+
+    elemento = models.ForeignKey(
+        "ElementosMontaje",
+        on_delete=models.PROTECT,
+        related_name="paquetes"
+    )
+
+    cantidad = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=1
+    )
+
+    obligatorio = models.BooleanField(
+        default=True
+    )
+
+    class Meta:
+
+        db_table = "paquete_montaje"
+
+        unique_together = (
+            "paquete",
+            "elemento",
+        )
+
+    def __str__(self):
+        return f"{self.paquete.nombre} - {self.elemento.nombre}"

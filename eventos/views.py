@@ -8,11 +8,13 @@ from .models import (
     Cotizaciones,
     Pagos,
     TiposEvento,
-    ProductosEvento,
     Servicios,
     ElementosMontaje,
     PaquetesEvento,
     AreasEvento,
+    Platillo,
+    Bebidas,
+    ServiciosOpcionales,
 )
 
 
@@ -199,86 +201,53 @@ def obtener_eventos_temporales():
 # ============================================================
 # PAQUETES TEMPORALES
 # ============================================================
-
 def obtener_paquetes():
 
     paquetes_db = (
         PaquetesEvento.objects
-        .filter(activo=True)
-        .select_related("tipo_evento")
-        .prefetch_related(
-            "productos__producto__categoria",
-            "servicios__servicio",
-            "montajes__elemento",
-        )
+        .all()
         .order_by("nombre")
     )
 
     paquetes = []
 
     for paquete in paquetes_db:
-        productos = []
+
+        servicios_db = (
+            Servicios.objects
+            .filter(id_paquete=paquete.id_paquete, estado=True)
+            .order_by("nombre")
+        )
+
         servicios = []
-        montajes = []
 
-        for item in paquete.productos.all():
-            productos.append({
-                "nombre": item.producto.nombre,
-                "cantidad": float(item.cantidad or 0)
-            })
-
-        for item in paquete.servicios.all():
+        for servicio in servicios_db:
             servicios.append({
-                "nombre": item.servicio.nombre,
-                "cantidad": float(item.cantidad or 0)
+                "id": str(servicio.id_servicio),
+                "nombre": servicio.nombre,
+                "descripcion": servicio.descripcion or "",
+                "precio": float(servicio.precio or 0),
             })
-
-        for item in paquete.montajes.all():
-            montajes.append({
-                "nombre": item.elemento.nombre,
-                "cantidad": float(item.cantidad or 0)
-            })
-
-        if paquete.precio_base == 0:
-            precio = 0
-            tipo_precio = "consumo"
-        else:
-            precio = float(paquete.precio_base)
-            # Los paquetes VIP/infantil se cobran por persona;
-            # los demás paquetes con monto base se cobran por evento.
-            nombre_lower = paquete.nombre.lower()
-            tipo_precio = "persona" if (
-                "vip" in nombre_lower or
-                "infantil" in nombre_lower
-            ) else "fijo"
-
-        nota = ""
-        if tipo_precio == "consumo":
-            nota = "Consumo según los alimentos y bebidas seleccionados."
-        elif tipo_precio == "persona":
-            nota = "Precio base por persona. La cantidad se actualiza con el número de invitados."
-        else:
-            nota = "Precio base por evento."
 
         paquetes.append({
             "id": str(paquete.id_paquete),
             "nombre": paquete.nombre,
-            "subtitulo": paquete.tipo_evento.nombre,
+            "subtitulo": paquete.modalidad_pago or "",
             "descripcion": paquete.descripcion or "",
-            "precio": precio,
-            "tipo_precio": tipo_precio,
-            "productos": productos,
+            "min_personas": paquete.min_personas or 0,
+            "precio": 0,
+            "tipo_precio": "consumo",
             "servicios": servicios,
-            "montajes": montajes,
-            "nota": nota,
+            "productos": [],
+            "montajes": [],
+            "nota": paquete.que_incluye or "",
             "incluye": [
-                item["nombre"]
-                for item in productos + servicios + montajes
+                servicio["nombre"]
+                for servicio in servicios
             ],
         })
 
     return paquetes
-
 
 # ============================================================
 # HOME DE EVENTOS
@@ -361,7 +330,6 @@ def detalle_evento(request, numero):
 # ============================================================
 # NUEVA COTIZACIÃ“N
 # ============================================================
-
 @login_required(login_url="login")
 def nueva_cotizacion(request):
 
@@ -380,23 +348,59 @@ def nueva_cotizacion(request):
         .order_by("nombre")
     )
 
-    productos_db = (
-        ProductosEvento.objects
-        .filter(estado=True)
+    # =========================
+    # PLATILLOS
+    # =========================
+
+    platillos_db = (
+        Platillo.objects
         .select_related("categoria")
         .order_by("nombre")
     )
 
     catalogo = []
 
-    for producto in productos_db:
+    for platillo in platillos_db:
         catalogo.append({
-            "id": producto.producto_evento_id,
-            "nombre": producto.nombre,
-            "tipo": producto.categoria.nombre if producto.categoria else "Sin categoría",
-            "precio": float(producto.precio_base or 0),
-            "unidad": producto.unidad_medida,
+            "id": platillo.id_platillo,
+            "nombre": platillo.nombre,
+            "tipo": (
+                platillo.categoria.nombre
+                if platillo.categoria
+                else "Sin categoría"
+            ),
+            "precio": float(platillo.precio or 0),
+            "unidad": "unidad",
+            "categoria": "platillo",
         })
+
+    # =========================
+    # BEBIDAS
+    # =========================
+
+    bebidas_db = (
+        Bebidas.objects
+        .select_related("categoria")
+        .order_by("nombre")
+    )
+
+    for bebida in bebidas_db:
+        catalogo.append({
+            "id": bebida.id_bebida,
+            "nombre": bebida.nombre,
+            "tipo": (
+                bebida.categoria.nombre
+                if bebida.categoria
+                else "Sin categoría"
+            ),
+            "precio": float(bebida.precio or 0),
+            "unidad": "unidad",
+            "categoria": "bebida",
+        })
+
+    # =========================
+    # SERVICIOS
+    # =========================
 
     servicios_db = (
         Servicios.objects
@@ -408,24 +412,75 @@ def nueva_cotizacion(request):
 
     for servicio in servicios_db:
         variables.append({
-            "id": servicio.servicio_id,
+            "id": servicio.id_servicio,
             "nombre": servicio.nombre,
             "descripcion": servicio.descripcion or "",
-            "precio": float(servicio.precio_base or 0),
+            "precio": float(servicio.precio or 0),
             "unidad": "evento",
+            "paquete": (
+                servicio.id_paquete.id_paquete
+                if servicio.id_paquete
+                else None
+            ),
         })
 
-    categorias = list(dict.fromkeys(item["tipo"] for item in catalogo))
+    # =========================
+    # SERVICIOS OPCIONALES
+    # =========================
+
+    servicios_opcionales_db = (
+        ServiciosOpcionales.objects
+        .all()
+        .order_by("nombre")
+    )
+
+    servicios_opcionales = []
+
+    for servicio in servicios_opcionales_db:
+        servicios_opcionales.append({
+            "id": servicio.id_servicio_opcional,
+            "nombre": servicio.nombre,
+            "descripcion": servicio.descripcion or "",
+            "precio": float(servicio.precio or 0),
+            "medida": servicio.medida or "",
+        })
+
+    # =========================
+    # CATEGORÍAS
+    # =========================
+
+    categorias = list(
+        dict.fromkeys(
+            item["tipo"]
+            for item in catalogo
+        )
+    )
+
+    # =========================
+    # PAQUETES
+    # =========================
+
     paquetes = obtener_paquetes()
+
+    # =========================
+    # CONTEXTO
+    # =========================
 
     context = {
         "lugares": lugares,
         "tipos_evento": tipos_evento,
+
         "catalogo": catalogo,
         "variables": variables,
+        "servicios_opcionales": servicios_opcionales,
+
         "categorias": categorias,
+
         "paquetes": paquetes,
-        "paquetes_json": json.dumps(paquetes, ensure_ascii=False),
+        "paquetes_json": json.dumps(
+            paquetes,
+            ensure_ascii=False
+        ),
     }
 
     return render(
@@ -433,8 +488,6 @@ def nueva_cotizacion(request):
         "cotizacionNueva.html",
         context
     )
-
-
 
 @login_required(login_url="login")
 def registro_eventos(request):
