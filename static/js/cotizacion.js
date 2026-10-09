@@ -46,6 +46,7 @@ function obtenerPersonas() {
    SELECCIÓN DE PAQUETE
 ========================================================= */
 
+
 function seleccionarPaquete(id) {
     id = String(id);
 
@@ -62,20 +63,11 @@ function seleccionarPaquete(id) {
         if (!confirm(
             "Cambiar de paquete eliminará los conceptos agregados. ¿Continuar?"
         )) {
-            const anterior = document.querySelector(
-                'input[name="paquete"]:checked'
-            );
-
-            if (anterior) {
-                anterior.checked = false;
-            }
-
             const radioAnterior = document.querySelector(
                 `input[name="paquete"][value="${paqueteSeleccionado}"]`
             );
 
             if (radioAnterior) radioAnterior.checked = true;
-
             return;
         }
 
@@ -84,16 +76,17 @@ function seleccionarPaquete(id) {
 
     paqueteSeleccionado = id;
 
+    const paquete = paquetes[id];
     const info = document.getElementById("packageInfo");
 
     if (info) {
         info.replaceChildren();
 
         const titulo = document.createElement("strong");
-        titulo.textContent = paquetes[id].nombre;
+        titulo.textContent = paquete.nombre;
 
         const descripcion = document.createElement("p");
-        descripcion.textContent = paquetes[id].descripcion;
+        descripcion.textContent = paquete.descripcion || "";
 
         info.append(titulo, descripcion);
     }
@@ -104,14 +97,15 @@ function seleccionarPaquete(id) {
     if (busqueda) busqueda.value = "";
     if (categoria) categoria.value = "todas";
 
-    // Mostrar y filtrar catálogo y opcionales.
+    actualizarVisibilidadPropina();
+    actualizarPaqueteSeleccionado();
     filtrarCatalogo();
     filtrarServicios();
-
-    // La propina se muestra para los paquetes por consumo.
-    actualizarVisibilidadPropina();
-
+    renderizarDetalle();
+    calcularTotales();
     renderizarConceptos();
+
+    console.log("Paquete seleccionado:", paquete);
 }
 
 /* =========================================================
@@ -126,59 +120,83 @@ function esPremium(elemento) {
            nombre.includes("premium");
 }
 
-function esPlatilloEstandar(elemento) {
-    const nombre = (
-        elemento.dataset.nombre ||
-        elemento.querySelector("h3")?.textContent ||
-        ""
-    ).trim().toLowerCase();
 
-    return [
-        "pollo a la cordon bleu",
-        "pechuga en salsa de hongos",
-        "pechuga de pollo en salsa de hongos",
-        "pechuga de pollo en salsa de hongos de la casa"
-    ].includes(nombre);
+function esPlatilloEstandar(elemento) {
+    const tipo = (elemento.dataset.tipo || "")
+        .trim()
+        .toLowerCase();
+
+    return tipo.includes("standard");
 }
 
+
 function filtrarCatalogo() {
-    const texto = obtenerValor("buscarConcepto").toLowerCase();
+    const texto = (
+        document.getElementById("buscarConcepto")?.value || ""
+    ).toLowerCase().trim();
 
-    const categoria =
-        document.getElementById("categoryFilter")?.value || "todas";
+    const categoria = (
+        document.getElementById("categoryFilter")?.value || "todas"
+    ).toLowerCase().trim();
 
-    document.querySelectorAll(".catalog-item").forEach(elemento => {
-        const nombre = (
-            elemento.dataset.nombre ||
-            elemento.textContent ||
-            ""
-        ).toLowerCase();
+    // Usar el ID que guarda seleccionarPaquete()
+    const idPaquete = String(paqueteSeleccionado || "");
+    const paquete = paquetes[idPaquete];
 
-        const tipo = (
-            elemento.dataset.tipo || ""
-        ).trim();
+    const nombrePaquete = (paquete?.nombre || "").toLowerCase();
+
+    const esEstandar = nombrePaquete.includes("estándar") ||
+                       nombrePaquete.includes("estandar");
+
+    const esPremium = nombrePaquete.includes("premium");
+
+    let visibles = 0;
+
+    document.querySelectorAll(".catalog-item").forEach(item => {
+        const nombre = (item.dataset.nombre || "")
+            .toLowerCase()
+            .trim();
+
+        const tipo = (item.dataset.tipo || "")
+            .toLowerCase()
+            .trim();
 
         let permitido = true;
 
-        if (paqueteSeleccionado === "1") {
-            permitido = esPremium(elemento);
-        } else if (["2", "3"].includes(paqueteSeleccionado)) {
-            permitido = !esPremium(elemento);
-        } else if (paqueteSeleccionado === "4") {
-            permitido = esPlatilloEstandar(elemento);
+        if (esEstandar) {
+            permitido =
+                tipo.includes("standard") ||
+                tipo.includes("estándar") ||
+                tipo.includes("estandar");
+        } else if (esPremium) {
+            permitido = tipo.includes("premium");
         }
 
-        const coincideTexto = nombre.includes(texto);
+        const coincideTexto =
+            !texto || nombre.includes(texto);
 
         const coincideCategoria =
             categoria === "todas" || tipo === categoria;
 
-        elemento.style.display =
-            permitido && coincideTexto && coincideCategoria
-                ? ""
-                : "none";
+        const visible =
+            permitido && coincideTexto && coincideCategoria;
+
+        item.style.display = visible ? "" : "none";
+
+        if (visible) visibles++;
     });
+
+    const empty = document.getElementById("catalogEmpty");
+
+    if (empty) {
+        empty.style.display = visibles ? "none" : "block";
+    }
+
+    console.log("Paquete:", nombrePaquete);
+    console.log("Platillos visibles:", visibles);
 }
+
+window.filtrarCatalogo = filtrarCatalogo;
 
 /* =========================================================
    SERVICIOS OPCIONALES
