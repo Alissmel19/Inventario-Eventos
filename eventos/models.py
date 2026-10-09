@@ -194,6 +194,30 @@ class DetalleHospedaje(models.Model):
         db_table = 'detalle_hospedaje'
 
 
+class DetalleCotizacion(models.Model):
+    detalle_cotizacion_id = models.AutoField(primary_key=True)
+    cotizacion = models.ForeignKey('Cotizaciones', models.DO_NOTHING)
+    # Se representa como entero para no depender de una clase ProductosEvento
+    # que no existe en el models.py actual. La columna de PostgreSQL se conserva.
+    producto_evento_id = models.IntegerField(
+        db_column='producto_evento_id', blank=True, null=True
+    )
+    elemento_montaje = models.ForeignKey(
+        'ElementosMontaje', models.DO_NOTHING, blank=True, null=True
+    )
+    concepto = models.CharField(max_length=250)
+    descripcion = models.TextField(blank=True, null=True)
+    cantidad = models.DecimalField(max_digits=12, decimal_places=2)
+    unidad = models.CharField(max_length=50, blank=True, null=True)
+    precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
+    observaciones = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'detalle_cotizacion'
+
+
 class DetallesEvento(models.Model):
     detalle_evento_id = models.AutoField(primary_key=True)
     evento = models.ForeignKey('Eventos', models.DB_CASCADE)

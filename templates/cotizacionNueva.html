@@ -1,2001 +1,1215 @@
 {% extends "base_eventos.html" %}
 
-
-
 {% load static %}
-
-
-
-
 
 {% block title %}
 
-    Nueva Cotización | Beraká
+    Nueva Cotización | Beraká
 
 {% endblock %}
-
-
-
-
 
 {% block extra_css %}
 
-
-
 <link
 
-    rel="stylesheet"
+    rel="stylesheet"
 
-    href="{% static 'css/cotizacion.css' %}"
+    href="{% static 'css/cotizacion.css' %}"
 
 >
 
-
-
 {% endblock %}
-
-
-
-
 
 {% block content %}
 
-
-
-
-
 <!-- =====================================================
 
-     HEADER
+     HEADER
 
-\===================================================== -->
-
-
+\\\\===================================================== -->
 
 <section class="quote-header">
 
+    <div>
 
+        <span class="eyebrow">
 
-    <div>
+            BERAKÁ COTIZACIONES
 
+        </span>
 
+        <h1>
 
-        <span class="eyebrow">
+            Nueva cotización
 
-            BERAKÁ · COTIZACIONES
+        </h1>
 
-        </span>
+        <p>
 
+            Crea una propuesta completa para tu cliente.
 
+        </p>
 
-        <h1>
+    </div>
 
-            Nueva cotización
+    <div class="quote-actions">
 
-        </h1>
+        <a
 
+            href="{% url 'registro_eventos' %}"
 
+            class="btn btn-light"
 
-        <p>
+        >
 
-            Crea una propuesta completa para tu cliente.
+            ← Eventos
 
-        </p>
+        </a>
 
+        <button
 
+            type="button"
 
-    </div>
+            class="btn btn-gold"
 
+            onclick="window\.print()"
 
+        >
 
+            Imprimir
 
+        </button>
 
-    <div class="quote-actions">
-
-
-
-        <a
-
-            href="{% url 'registro_eventos' %}"
-
-            class="btn btn-light"
-
-        >
-
-            ← Eventos
-
-        </a>
-
-
-
-
-
-        <button
-
-            type="button"
-
-            class="btn btn-gold"
-
-            onclick="window.print()"
-
-        >
-
-            Imprimir
-
-        </button>
-
-
-
-    </div>
-
-
+    </div>
 
 </section>
 
-
-
-
-
 <!-- =====================================================
 
-     CLIENTE
+     CLIENTE
 
-\===================================================== -->
-
-
+\\\\===================================================== -->
 
 <section class="quote-card">
 
+    <div class="section-title">
 
+        <span class="section-number">
 
-    <div class="section-title">
+            01
 
+        </span>
 
+        <div>
 
-        <span class="section-number">
+            <h2>
 
-            01
+                Información del cliente
 
-        </span>
+            </h2>
 
+            <p>
 
+                Datos de la persona o empresa.
 
-        <div>
+            </p>
 
+        </div>
 
+    </div>
 
-            <h2>
+    <div class="form-grid">
 
-                Información del cliente
+        <div class="form-group">
 
-            </h2>
+            <label>
 
+                Nombre del cliente \\\\\*
 
+            </label>
 
-            <p>
+            <input
 
-                Datos de la persona o empresa.
+                type="text"
 
-            </p>
+                id="cliente"
 
+                placeholder="Ej. María López"
 
+            >
 
-        </div>
+        </div>
 
+        <div class="form-group">
 
+            <label>
 
-    </div>
+                Teléfono
 
+            </label>
 
+            <input
 
+                type="text"
 
+                id="telefono"
 
-    <div class="form-grid">
+                placeholder="0000-0000"
 
+            >
 
+        </div>
 
-        <div class="form-group">
+        <div class="form-group">
 
+            <label>
 
+                Correo electrónico
 
-            <label>
+            </label>
 
-                Nombre del cliente \*
+            <input
 
-            </label>
+                type="email"
 
+                id="correo"
 
+                placeholder="cliente\@correo.com"
 
-            <input
+            >
 
-                type="text"
+        </div>
 
-                id="cliente"
-
-                placeholder="Ej. María López"
-
-            >
-
-
-
-        </div>
-
-
-
-
-
-        <div class="form-group">
-
-
-
-            <label>
-
-                Teléfono
-
-            </label>
-
-
-
-            <input
-
-                type="text"
-
-                id="telefono"
-
-                placeholder="0000-0000"
-
-            >
-
-
-
-        </div>
-
-
-
-
-
-        <div class="form-group">
-
-
-
-            <label>
-
-                Correo electrónico
-
-            </label>
-
-
-
-            <input
-
-                type="email"
-
-                id="correo"
-
-                placeholder="cliente@correo.com"
-
-            >
-
-
-
-        </div>
-
-
-
-    </div>
-
-
+    </div>
 
 </section>
 
-
-
-
-
 <!-- =====================================================
 
-     EVENTO
+     EVENTO
 
-\===================================================== -->
-
-
+\\\\===================================================== -->
 
 <section class="quote-card">
 
+    <div class="section-title">
 
+        <span class="section-number">
 
-    <div class="section-title">
+            02
 
+        </span>
 
+        <div>
 
-        <span class="section-number">
+            <h2>
 
-            02
+                Información del evento
 
-        </span>
+            </h2>
 
+            <p>
 
+                Cuándo, dónde y para cuántas personas.
 
-        <div>
+            </p>
 
+        </div>
 
+    </div>
 
-            <h2>
+    <div class="form-grid">
 
-                Información del evento
+        <div class="form-group">
 
-            </h2>
+            <label>
 
+                Tipo de evento \\\\\*
 
+            </label>
 
-            <p>
+            <select id="tipoEvento">
 
-                Cuándo, dónde y para cuántas personas.
+                <option value="">
 
-            </p>
+                    Seleccionar tipo
 
+                </option>
 
+                {% for tipo in tipos_evento %}
 
-        </div>
+                <option value="{{ tipo }}">
 
+                    {{ tipo }}
 
+                </option>
 
-    </div>
+                {% endfor %}
 
+            </select>
 
+        </div>
 
+        <div class="form-group">
 
+            <label>
 
-    <div class="form-grid">
+                Fecha del evento \\\\\*
 
+            </label>
 
+            <input
 
+                type="date"
 
+                id="fechaEvento"
 
-        <div class="form-group">
+            >
 
+        </div>
 
+        <div class="form-group">
 
-            <label>
+            <label>
 
-                Tipo de evento \*
+                Hora de inicio
 
-            </label>
+            </label>
 
+            <input
 
+                type="time"
 
-            <select id="tipoEvento">
+                id="horaInicio"
 
+            >
 
+        </div>
 
-                <option value="">
+        <div class="form-group">
 
-                    Seleccionar tipo
+            <label>
 
-                </option>
+                Hora de finalización
 
+            </label>
 
+            <input
 
-                {% for tipo in tipos_evento %}
+                type="time"
 
+                id="horaFin"
 
+            >
 
-                <option value="{{ tipo }}">
+        </div>
 
-                    {{ tipo }}
+        <div class="form-group">
 
-                </option>
+            <label>
 
+                Cantidad de personas \\\\\*
 
+            </label>
 
-                {% endfor %}
+            <input
 
+                type="number"
 
+                id="personas"
 
-            </select>
+                min="1"
 
+                value="50"
 
+                oninput="actualizarPersonas()"
 
-        </div>
+            >
 
+        </div>
 
+        <div class="form-group">
 
+            <label>
 
+                Lugar del evento \\\\\*
 
-        <div class="form-group">
+            </label>
 
+            <select id="lugarEvento">
 
+                <option value="">
 
-            <label>
+                    Seleccione el lugar
 
-                Fecha del evento \*
+                </option>
 
-            </label>
+                {% for lugar in lugares %}
 
+                <option value="{{ lugar }}">
 
+                    {{ lugar }}
 
-            <input
+                </option>
 
-                type="date"
+                {% endfor %}
 
-                id="fechaEvento"
+            </select>
 
-            >
+        </div>
 
+        <div class="form-group full">
 
+            <label>
 
-        </div>
+                Dirección del evento
 
+            </label>
 
+            <textarea
 
+                id="direccionEvento"
 
+                rows="2"
 
-        <div class="form-group">
+                placeholder="Dirección completa..."
 
+            ></textarea>
 
+        </div>
 
-            <label>
+        <div class="form-group full">
 
-                Hora de inicio
+            <label>
 
-            </label>
+                Observaciones
 
+            </label>
 
+            <textarea
 
-            <input
+                id="observaciones"
 
-                type="time"
+                rows="3"
 
-                id="horaInicio"
+                placeholder="Información adicional del evento..."
 
-            >
+            ></textarea>
 
+        </div>
 
-
-        </div>
-
-
-
-
-
-        <div class="form-group">
-
-
-
-            <label>
-
-                Hora de finalización
-
-            </label>
-
-
-
-            <input
-
-                type="time"
-
-                id="horaFin"
-
-            >
-
-
-
-        </div>
-
-
-
-
-
-        <div class="form-group">
-
-
-
-            <label>
-
-                Cantidad de personas \*
-
-            </label>
-
-
-
-            <input
-
-                type="number"
-
-                id="personas"
-
-                min="1"
-
-                value="50"
-
-                oninput="actualizarPersonas()"
-
-            >
-
-
-
-        </div>
-
-
-
-
-
-        <div class="form-group">
-
-
-
-            <label>
-
-                Lugar del evento \*
-
-            </label>
-
-
-
-            <select id="lugarEvento">
-
-
-
-                <option value="">
-
-                    Seleccione el lugar
-
-                </option>
-
-
-
-                {% for lugar in lugares %}
-
-
-
-                <option value="{{ lugar }}">
-
-                    {{ lugar }}
-
-                </option>
-
-
-
-                {% endfor %}
-
-
-
-            </select>
-
-
-
-        </div>
-
-
-
-
-
-        <div class="form-group full">
-
-
-
-            <label>
-
-                Dirección del evento
-
-            </label>
-
-
-
-            <textarea
-
-                id="direccionEvento"
-
-                rows="2"
-
-                placeholder="Dirección completa..."
-
-            ></textarea>
-
-
-
-        </div>
-
-
-
-
-
-        <div class="form-group full">
-
-
-
-            <label>
-
-                Observaciones
-
-            </label>
-
-
-
-            <textarea
-
-                id="observaciones"
-
-                rows="3"
-
-                placeholder="Información adicional del evento..."
-
-            ></textarea>
-
-
-
-        </div>
-
-
-
-    </div>
-
-
+    </div>
 
 </section>
 
-
-
-
-
 <!-- =====================================================
 
-     PAQUETE
+     PAQUETE
 
-\===================================================== -->
-
-
+\\\\===================================================== -->
 
 <section class="quote-card">
 
+    <div class="section-title">
 
+        <span class="section-number">
 
-    <div class="section-title">
+            03
 
+        </span>
 
+        <div>
 
-        <span class="section-number">
+            <h2>
 
-            03
+                Paquete para el evento
 
-        </span>
+            </h2>
 
+            <p>
 
+                Selecciona la propuesta comercial.
 
-        <div>
+            </p>
 
+        </div>
 
+    </div>
 
-            <h2>
+    <div class="package-selector">
 
-                Paquete para el evento
+        {% for paquete in paquetes %}
 
-            </h2>
+        <label class="package-option">
 
+            <input
 
+                type="radio"
 
-            <p>
+                name="paquete"
 
-                Selecciona la propuesta comercial.
+                value="{{ paquete.id }}"
 
-            </p>
+                onchange="seleccionarPaquete('{{ paquete.id }}')"
 
+            >
 
+            <div>
 
-        </div>
+                <span>
 
+                    {{ paquete.subtitulo }}
 
+                </span>
 
-    </div>
+                <h3>
 
+                    {{ paquete.nombre }}
 
+                </h3>
 
+                <p>
 
+                    {{ paquete.descripcion }}
 
-    <div class="package-selector">
+                </p>
 
+            </div>
 
+        </label>
 
-        {% for paquete in paquetes %}
+        {% endfor %}
 
+    </div>
 
+    <div
 
-        <label class="package-option">
+        id="packageInfo"
 
+        class="package-selected"
 
+    >
 
-            <input
+        Selecciona un paquete para ver su información.
 
-                type="radio"
-
-                name="paquete"
-
-                value="{{ paquete.id }}"
-
-                onchange="seleccionarPaquete('{{ paquete.id }}')"
-
-            >
-
-
-
-            <div>
-
-
-
-                <span>
-
-                    {{ paquete.subtitulo }}
-
-                </span>
-
-
-
-                <h3>
-
-                    {{ paquete.nombre }}
-
-                </h3>
-
-
-
-                <p>
-
-                    {{ paquete.descripcion }}
-
-                </p>
-
-
-
-            </div>
-
-
-
-        </label>
-
-
-
-        {% endfor %}
-
-
-
-    </div>
-
-
-
-
-
-    <div
-
-        id="packageInfo"
-
-        class="package-selected"
-
-    >
-
-
-
-        Selecciona un paquete para ver su información.
-
-
-
-    </div>
-
-
+    </div>
 
 </section>
 
-
-
-
-
 <!-- =====================================================
 
-     CATÁLOGO
+     CATÁLOGO
 
-\===================================================== -->
-
-
+\\\\===================================================== -->
 
 <section class="quote-card">
 
+    <div class="section-title">
 
+        <span class="section-number">
 
-    <div class="section-title">
+            04
 
+        </span>
 
+        <div>
 
-        <span class="section-number">
+            <h2>
 
-            04
+                Catálogo de servicios
 
-        </span>
+            </h2>
 
+            <p>
 
+                Agrega conceptos a la cotización.
 
-        <div>
+            </p>
 
+        </div>
 
+    </div>
 
-            <h2>
+    <div class="catalog-toolbar">
 
-                Catálogo de servicios
+        <input
 
-            </h2>
+            type="text"
 
+            id="buscarConcepto"
 
+            placeholder="Buscar concepto..."
 
-            <p>
+            onkeyup="filtrarCatalogo()"
 
-                Agrega conceptos a la cotización.
+        >
 
-            </p>
+        <select
 
+            id="categoryFilter"
 
+            onchange="filtrarCatalogo()"
 
-        </div>
+        >
 
+            <option value="todas">
 
+                Todas las categorías
 
-    </div>
+            </option>
 
+            {% for categoria in categorias %}
 
+            <option value="{{ categoria }}">
 
+                {{ categoria }}
 
+            </option>
 
-    <div class="catalog-toolbar">
+            {% endfor %}
 
+        </select>
 
+    </div>
 
-        <input
+    <div class="catalog-grid">
 
-            type="text"
+        {% for item in catalogo %}
 
-            id="buscarConcepto"
+        <article
 
-            placeholder="Buscar concepto..."
+            class="catalog-item"
 
-            onkeyup="filtrarCatalogo()"
+            data-nombre="{{ item.nombre|lower }}"
 
-        >
+            data-tipo="{{ item.tipo|escape }}"
 
+        >
 
+            <span class="catalog-category">
 
+                {{ item.tipo }}
 
+            </span>
 
-        <select
+            <h3>
 
-            id="categoryFilter"
+                {{ item.nombre }}
 
-            onchange="filtrarCatalogo()"
+            </h3>
 
-        >
+            <p>
 
+                ${{ item.precio|floatformat:2 }}
 
+                / {{ item.unidad }}
 
-            <option value="todas">
+            </p>
 
-                Todas las categorías
+            <button
 
-            </option>
+                type="button"
 
+                onclick="agregarConcepto(
 
+                    '{{ item.nombre|escapejs }}',
 
-            {% for categoria in categorias %}
+                    '{{ item.tipo|escapejs }}',
 
+                    '{{ item.precio }}',
 
+                    '{{ item.unidad|escapejs }}'
 
-            <option value="{{ categoria }}">
+                )"
 
-                {{ categoria }}
+            >
 
-            </option>
+                + Agregar
 
+            </button>
 
+        </article>
 
-            {% endfor %}
+        {% endfor %}
 
-
-
-        </select>
-
-
-
-    </div>
-
-
-
-
-
-    <div class="catalog-grid">
-
-
-
-
-
-        {% for item in catalogo %}
-
-
-
-        <article
-
-            class="catalog-item"
-
-            data-nombre="{{ item.nombre|lower }}"
-
-            data-tipo="{{ item.tipo }}"
-
-        >
-
-
-
-            <span class="catalog-category">
-
-                {{ item.tipo }}
-
-            </span>
-
-
-
-
-
-            <h3>
-
-                {{ item.nombre }}
-
-            </h3>
-
-
-
-
-
-            <p>
-
-                ${{ item.precio|floatformat:2 }}
-
-                / {{ item.unidad }}
-
-            </p>
-
-
-
-
-
-            <button
-
-                type="button"
-
-                onclick="agregarConcepto(
-
-                    '{{ item.nombre|escapejs }}',
-
-                    '{{ item.tipo|escapejs }}',
-
-                    '{{ item.precio }}',
-
-                    '{{ item.unidad|escapejs }}'
-
-                )"
-
-            >
-
-                + Agregar
-
-            </button>
-
-
-
-        </article>
-
-
-
-        {% endfor %}
-
-
-
-
-
-    </div>
-
-
+    </div>
 
 </section>
 
-
-
-
-
 <!-- =====================================================
 
-     VARIABLES
+     VARIABLES
 
-\===================================================== -->
-
-
+\\\\===================================================== -->
 
 <section class="quote-card">
 
+    <div class="section-title">
 
+        <span class="section-number">
 
-    <div class="section-title">
+            05
 
+        </span>
 
+        <div>
 
-        <span class="section-number">
+            <h2>
 
-            05
+                Servicios opcionales
 
-        </span>
+            </h2>
 
+            <p>
 
+                Servicios adicionales para el evento.
 
-        <div>
+            </p>
 
+        </div>
 
+    </div>
 
-            <h2>
+    <div class="variables-grid">
 
-                Servicios opcionales
+        {% for item in variables %}
 
-            </h2>
+        <article class="variable-card">
 
+            <div>
 
+                <span class="catalog-category">
 
-            <p>
+                    OPCIONAL
 
-                Servicios adicionales para el evento.
+                </span>
 
-            </p>
+                <h3>
 
+                    {{ item.nombre }}
 
+                </h3>
 
-        </div>
+                <p>
 
+                    {{ item.descripcion }}
 
+                </p>
 
-    </div>
+                <strong>
 
+                    ${{ item.precio|floatformat:2 }}
 
+                    / {{ item.unidad }}
 
+                </strong>
 
+            </div>
 
-    <div class="variables-grid">
+            <button
 
+                type="button"
 
+                onclick="agregarVariable(
 
+                    '{{ item.nombre|escapejs }}',
 
+                    '{{ item.precio }}',
 
-        {% for item in variables %}
+                    '{{ item.unidad|escapejs }}'
 
+                )"
 
+            >
 
-        <article class="variable-card">
+                + Agregar
 
+            </button>
 
+        </article>
 
-            <div>
+        {% endfor %}
 
-
-
-                <span class="catalog-category">
-
-                    OPCIONAL
-
-                </span>
-
-
-
-                <h3>
-
-                    {{ item.nombre }}
-
-                </h3>
-
-
-
-                <p>
-
-                    {{ item.descripcion }}
-
-                </p>
-
-
-
-                <strong>
-
-                    ${{ item.precio|floatformat:2 }}
-
-                    / {{ item.unidad }}
-
-                </strong>
-
-
-
-            </div>
-
-
-
-
-
-            <button
-
-                type="button"
-
-                onclick="agregarVariable(
-
-                    '{{ item.nombre|escapejs }}',
-
-                    '{{ item.precio }}',
-
-                    '{{ item.unidad|escapejs }}'
-
-                )"
-
-            >
-
-                + Agregar
-
-            </button>
-
-
-
-        </article>
-
-
-
-        {% endfor %}
-
-
-
-
-
-    </div>
-
-
+    </div>
 
 </section>
 
-
-
-
-
 <!-- =====================================================
 
-     DETALLE
+     DETALLE
 
-\===================================================== -->
-
-
+\\\\===================================================== -->
 
 <section class="quote-card">
 
+    <div class="section-title">
 
+        <span class="section-number">
 
-    <div class="section-title">
+            06
 
+        </span>
 
+        <div>
 
-        <span class="section-number">
+            <h2>
 
-            06
+                Detalle de la cotización
 
-        </span>
+            </h2>
 
+            <p>
 
+                Conceptos agregados.
 
-        <div>
+            </p>
 
+        </div>
 
+    </div>
 
-            <h2>
+    <div class="table-wrapper">
 
-                Detalle de la cotización
+        <table>
 
-            </h2>
+            <thead>
 
+                <tr>
 
+                    <th>
 
-            <p>
+                        Concepto
 
-                Conceptos agregados.
+                    </th>
 
-            </p>
+                    <th>
 
+                        Cantidad
 
+                    </th>
 
-        </div>
+                    <th>
 
+                        Unidad
 
+                    </th>
 
-    </div>
+                    <th>
 
+                        Costo p/p
 
+                    </th>
 
+                    <th>
 
+                        Total
 
-    <div class="table-wrapper">
+                    </th>
 
+                    <th>
 
+                    </th>
 
-        <table>
+                </tr>
 
+            </thead>
 
+            <tbody id="cotizacionBody">
 
-            <thead>
+            </tbody>
 
+        </table>
 
+    </div>
 
-                <tr>
+    <div
 
+        id="emptyMessage"
 
+        class="empty-message"
 
-                    <th>
+    >
 
-                        Concepto
+        Aún no has agregado ningún concepto.
 
-                    </th>
-
-
-
-                    <th>
-
-                        Cantidad
-
-                    </th>
-
-
-
-                    <th>
-
-                        Unidad
-
-                    </th>
-
-
-
-                    <th>
-
-                        Costo p/p
-
-                    </th>
-
-
-
-                    <th>
-
-                        Total
-
-                    </th>
-
-
-
-                    <th>
-
-                    </th>
-
-
-
-                </tr>
-
-
-
-            </thead>
-
-
-
-
-
-            <tbody id="cotizacionBody">
-
-            </tbody>
-
-
-
-        </table>
-
-
-
-    </div>
-
-
-
-
-
-    <div
-
-        id="emptyMessage"
-
-        class="empty-message"
-
-    >
-
-        Aún no has agregado ningún concepto.
-
-    </div>
-
-
+    </div>
 
 </section>
 
-
-
-
-
 <!-- =====================================================
 
-     RESUMEN
+     RESUMEN
 
-\===================================================== -->
-
-
+\\\\===================================================== -->
 
 <section class="summary-card">
 
+    <div class="summary-header">
 
+        RESUMEN DE COTIZACIÓN
 
+    </div>
 
+    <div class="summary-row">
 
-    <div class="summary-header">
+        <span>
 
+            Subtotal
 
+        </span>
 
-        RESUMEN DE COTIZACIÓN
+        <strong id="subtotal">
 
+            $0.00
 
+        </strong>
 
-    </div>
+    </div>
 
+    <div class="summary-row">
 
+        <span>
 
+            Descuento
 
+        </span>
 
-    <div class="summary-row">
+        <div class="input-money">
 
+            <span>
 
+                $
 
-        <span>
+            </span>
 
-            Subtotal
+            <input
 
-        </span>
+                type="number"
 
+                id="descuento"
 
+                value="0"
 
-        <strong id="subtotal">
+                min="0"
 
-            $0.00
+                step="0.01"
 
-        </strong>
+                oninput="calcularTotales()"
 
+            >
 
+        </div>
 
-    </div>
+    </div>
 
+    <div class="summary-row" id="filaPropina" style="display: none;">
+        <span>Propina</span>
+        <div class="input-percentage">
 
+            <input
 
+                type="number"
 
+                id="propina"
 
-    <div class="summary-row">
+                value="10"
 
+                min="0"
 
+                step="0.01"
 
-        <span>
+                oninput="calcularTotales()"
 
-            Descuento
+            >
 
-        </span>
+            <span>
 
+                %
 
+            </span>
 
-        <div class="input-money">
+        </div>
 
+    </div>
 
+    <div class="summary-row">
 
-            <span>
+        <span>
 
-                $
+            Base imponible
 
-            </span>
+        </span>
 
+        <strong id="baseImponible">
 
+            $0.00
 
-            <input
+        </strong>
 
-                type="number"
+    </div>
 
-                id="descuento"
+    <div class="summary-row" id="filaMontoPropina" style="display: none;">
+        <span>Monto propina</span>
+        <strong id="montoPropina">
 
-                value="0"
+            $0.00
 
-                min="0"
+        </strong>
 
-                step="0.01"
+    </div>
 
-                oninput="calcularTotales()"
+    <div class="total-row">
 
-            >
+        <span>
 
+            TOTAL
 
+        </span>
 
-        </div>
+        <strong id="total">
 
+            $0.00
 
+        </strong>
 
-    </div>
+    </div>
 
+    <div class="per-person">
 
+        <span>
 
+            Costo por persona
 
+        </span>
 
-    <div class="summary-row">
+        <strong id="costoPersona">
 
+            $0.00
 
+        </strong>
 
-        <span>
-
-            Propina
-
-        </span>
-
-
-
-        <div class="input-percentage">
-
-
-
-            <input
-
-                type="number"
-
-                id="propina"
-
-                value="10"
-
-                min="0"
-
-                step="0.01"
-
-                oninput="calcularTotales()"
-
-            >
-
-
-
-            <span>
-
-                %
-
-            </span>
-
-
-
-        </div>
-
-
-
-    </div>
-
-
-
-
-
-    <div class="summary-row">
-
-
-
-        <span>
-
-            IVA
-
-        </span>
-
-
-
-        <div class="input-percentage">
-
-
-
-            <input
-
-                type="number"
-
-                id="iva"
-
-                value="13"
-
-                min="0"
-
-                step="0.01"
-
-                oninput="calcularTotales()"
-
-            >
-
-
-
-            <span>
-
-                %
-
-            </span>
-
-
-
-        </div>
-
-
-
-    </div>
-
-
-
-
-
-    <div class="summary-row">
-
-
-
-        <span>
-
-            Base imponible
-
-        </span>
-
-
-
-        <strong id="baseImponible">
-
-            $0.00
-
-        </strong>
-
-
-
-    </div>
-
-
-
-
-
-    <div class="summary-row">
-
-
-
-        <span>
-
-            Monto propina
-
-        </span>
-
-
-
-        <strong id="montoPropina">
-
-            $0.00
-
-        </strong>
-
-
-
-    </div>
-
-
-
-
-
-    <div class="summary-row">
-
-
-
-        <span>
-
-            Monto IVA
-
-        </span>
-
-
-
-        <strong id="montoIVA">
-
-            $0.00
-
-        </strong>
-
-
-
-    </div>
-
-
-
-
-
-    <div class="total-row">
-
-
-
-        <span>
-
-            TOTAL
-
-        </span>
-
-
-
-        <strong id="total">
-
-            $0.00
-
-        </strong>
-
-
-
-    </div>
-
-
-
-
-
-    <div class="per-person">
-
-
-
-        <span>
-
-            Costo por persona
-
-        </span>
-
-
-
-        <strong id="costoPersona">
-
-            $0.00
-
-        </strong>
-
-
-
-    </div>
-
-
-
-
+    </div>
 
 </section>
 
-
-
-
-
 <!-- =====================================================
 
-     CONDICIONES
+     CONDICIONES
 
-\===================================================== -->
-
-
+\\\\===================================================== -->
 
 <section class="quote-card">
 
+    <div class="section-title">
 
+        <span class="section-number">
 
-    <div class="section-title">
+            07
 
+        </span>
 
+        <div>
 
-        <span class="section-number">
+            <h2>
 
-            07
+                Condiciones de la cotización
 
-        </span>
+            </h2>
 
+            <p>
 
+                Información comercial.
 
-        <div>
+            </p>
 
+        </div>
 
+    </div>
 
-            <h2>
+    <div class="form-grid">
 
-                Condiciones de la cotización
+        <div class="form-group">
 
-            </h2>
+            <label>
 
+                Forma de pago
 
+            </label>
 
-            <p>
+            <select id="formaPago">
 
-                Información comercial.
+                <option>
 
-            </p>
+                    Transferencia bancaria
 
+                </option>
 
+                <option>
 
-        </div>
+                    Depósito bancario
 
+                </option>
 
+                <option>
 
-    </div>
+                    Efectivo
 
+                </option>
 
+                <option>
 
+                    Tarjeta
 
+                </option>
 
-    <div class="form-grid">
+            </select>
 
+        </div>
 
+        <div class="form-group">
 
+            <label>
 
+                Anticipo requerido
 
-        <div class="form-group">
+            </label>
 
+            <input
 
+                type="number"
 
-            <label>
+                id="anticipo"
 
-                Forma de pago
+                min="0"
 
-            </label>
+                placeholder="Ej. 50%"
 
+            >
 
+        </div>
 
-            <select id="formaPago">
+        <div class="form-group">
 
+            <label>
 
+                Vigencia
 
-                <option>
+            </label>
 
-                    Transferencia bancaria
+            <input
 
-                </option>
+                type="text"
 
+                value="15 días"
 
+                id="vigencia"
 
-                <option>
+            >
 
-                    Depósito bancario
+        </div>
 
-                </option>
+        <div class="form-group">
 
+            <label>
 
+                Fecha límite de confirmación
 
-                <option>
+            </label>
 
-                    Efectivo
+            <input
 
-                </option>
+                type="date"
 
+                id="fechaLimite"
 
+            >
 
-                <option>
+        </div>
 
-                    Tarjeta
+        <div class="form-group full">
 
-                </option>
+            <label>
 
+                Condiciones / notas
 
+            </label>
 
-            </select>
+            <textarea
 
+                id="condiciones"
 
+                rows="4"
 
-        </div>
+                placeholder="Condiciones especiales..."
 
+            ></textarea>
 
+        </div>
 
-
-
-        <div class="form-group">
-
-
-
-            <label>
-
-                Anticipo requerido
-
-            </label>
-
-
-
-            <input
-
-                type="number"
-
-                id="anticipo"
-
-                min="0"
-
-                placeholder="Ej. 50%"
-
-            >
-
-
-
-        </div>
-
-
-
-
-
-        <div class="form-group">
-
-
-
-            <label>
-
-                Vigencia
-
-            </label>
-
-
-
-            <input
-
-                type="text"
-
-                value="15 días"
-
-                id="vigencia"
-
-            >
-
-
-
-        </div>
-
-
-
-
-
-        <div class="form-group">
-
-
-
-            <label>
-
-                Fecha límite de confirmación
-
-            </label>
-
-
-
-            <input
-
-                type="date"
-
-                id="fechaLimite"
-
-            >
-
-
-
-        </div>
-
-
-
-
-
-        <div class="form-group full">
-
-
-
-            <label>
-
-                Condiciones / notas
-
-            </label>
-
-
-
-            <textarea
-
-                id="condiciones"
-
-                rows="4"
-
-                placeholder="Condiciones especiales..."
-
-            ></textarea>
-
-
-
-        </div>
-
-
-
-    </div>
-
-
+    </div>
 
 </section>
 
-
-
-
-
 <!-- =====================================================
 
-     BOTONES
+     BOTONES
 
-\===================================================== -->
-
-
+\\\\===================================================== -->
 
 <div class="bottom-actions">
 
+    <a
 
+        href="{% url 'registro_eventos' %}"
 
-    <a
+        class="btn btn-light"
 
-        href="{% url 'registro_eventos' %}"
+    >
 
-        class="btn btn-light"
+        Cancelar
 
-    >
+    </a>
 
-        Cancelar
+    <button
 
-    </a>
+        type="button"
 
+        class="btn btn-outline"
 
+        onclick="window\.print()"
 
+    >
 
+        Vista previa
 
-    <button
+    </button>
 
-        type="button"
+    <button
 
-        class="btn btn-outline"
+        type="button"
 
-        onclick="window.print()"
+        class="btn btn-gold"
 
-    >
+        onclick="generarCotizacion()"
 
-        Vista previa
+    >
 
-    </button>
+        Generar cotización
 
-
-
-
-
-    <button
-
-        type="button"
-
-        class="btn btn-gold"
-
-        onclick="generarCotizacion()"
-
-    >
-
-        Generar cotización
-
-    </button>
-
-
+    </button>
 
 </div>
 
-
-
-
-
 {% endblock %}
-
-
-
-
 
 {% block extra_js %}
 
 <script>
+
     window.PAQUETES_BERAKA = {{ paquetes_json|safe }};
+
 </script>
 
-
-
 <script src="{% static 'js/cotizacion.js' %}"></script>
-
-
 
 {% endblock %}
