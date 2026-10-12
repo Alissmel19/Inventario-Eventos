@@ -28,4 +28,12 @@ path(
     views.cotizar_hospedaje,
     name="cotizar_hospedaje"
 ),
+
+
+path(
+    "hospedaje/guardar/",
+    views.guardar_cotizacion_hospedaje,
+    name="guardar_cotizacion_hospedaje",
+),
+
 ]

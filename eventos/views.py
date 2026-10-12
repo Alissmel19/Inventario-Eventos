@@ -1,4 +1,5 @@
 import json
+import uuid
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
@@ -14,6 +15,8 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_POST
+
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -49,6 +52,9 @@ from .models import (
     Bebidas,
 
     ServiciosOpcionales,
+     Hospedaje,
+    HabitacionesUnidades,
+    DetalleHospedaje,
 
 )
 
@@ -1453,3 +1459,167 @@ def habitaciones_disponibles(request):
 @login_required(login_url="login")
 def cotizar_hospedaje(request):
     return render(request, "cotizar_hospedaje.html")
+
+
+
+@login_required(login_url="login")
+@require_POST
+def guardar_cotizacion_hospedaje(request):
+    nombre = request.POST.get("nombre", "").strip()
+    telefono = request.POST.get("telefono", "").strip()
+    correo = request.POST.get("correo", "").strip()
+
+    fecha_entrada = parse_date(request.POST.get("fecha_entrada", ""))
+    fecha_salida = parse_date(request.POST.get("fecha_salida", ""))
+
+    ids_unidades = request.POST.getlist("habitaciones")
+
+    if not nombre:
+        return JsonResponse({
+            "ok": False,
+            "error": "El nombre del cliente es obligatorio."
+        }, status=400)
+
+    if not fecha_entrada or not fecha_salida:
+        return JsonResponse({
+            "ok": False,
+            "error": "Debes indicar las fechas de entrada y salida."
+        }, status=400)
+
+    if fecha_salida <= fecha_entrada:
+        return JsonResponse({
+            "ok": False,
+            "error": "La salida debe ser posterior a la entrada."
+        }, status=400)
+
+    if not ids_unidades:
+        return JsonResponse({
+            "ok": False,
+            "error": "Selecciona al menos una habitación."
+        }, status=400)
+
+    try:
+        ids_unidades = list({int(valor) for valor in ids_unidades})
+    except (ValueError, TypeError):
+        return JsonResponse({
+            "ok": False,
+            "error": "La selección de habitaciones no es válida."
+        }, status=400)
+
+    noches = (fecha_salida - fecha_entrada).days
+
+    try:
+        with transaction.atomic():
+            unidades = list(
+                HabitacionesUnidades.objects
+                .select_for_update()
+                .filter(
+                    id_unidad__in=ids_unidades,
+                    activa=True
+                )
+                .select_related("id_habitaciones")
+            )
+
+            if len(unidades) != len(ids_unidades):
+                return JsonResponse({
+                    "ok": False,
+                    "error": "Una o más habitaciones no existen o están inactivas."
+                }, status=400)
+
+            # Solo las cotizaciones aceptadas bloquean habitaciones.
+            ocupadas = DetalleHospedaje.objects.filter(
+                fecha_check_in__lt=fecha_salida,
+                fecha_check_out__gt=fecha_entrada,
+                id_unidad__in=ids_unidades,
+                id_hospedaje__cotizacion__estado="Aceptada",
+            ).values_list("id_unidad_id", flat=True)
+
+            ids_ocupadas = set(ocupadas)
+
+            if ids_ocupadas:
+                return JsonResponse({
+                    "ok": False,
+                    "error": (
+                        "Una o más habitaciones ya están reservadas "
+                        "para esas fechas. Consulta la disponibilidad otra vez."
+                    )
+                }, status=409)
+
+            subtotal = sum(
+                (
+                    Decimal(str(unidad.id_habitaciones.precio))
+                    * noches
+                    for unidad in unidades
+                ),
+                Decimal("0.00")
+            )
+
+            ahora = timezone.now()
+
+            cliente = Clientes.objects.create(
+                nombre=nombre,
+                telefono=telefono or None,
+                correo=correo or None,
+                fecha_registro=ahora,
+            )
+
+            numero = f"HOS-{ahora:%Y%m%d}-{uuid.uuid4().hex[:8].upper()}"
+
+            cotizacion = Cotizaciones.objects.create(
+                evento=None,
+                numero_cotizacion=numero,
+                fecha=ahora.date(),
+                subtotal=subtotal,
+                porcentaje_propina=Decimal("0.00"),
+                monto_propina=Decimal("0.00"),
+                descuento=Decimal("0.00"),
+                total=subtotal,
+                estado="Borrador",
+                observaciones=(
+                    f"Cotización independiente de hospedaje. "
+                    f"Entrada: {fecha_entrada}; salida: {fecha_salida}; "
+                    f"noches: {noches}."
+                ),
+                fecha_creacion=ahora,
+            )
+
+            hospedaje = Hospedaje.objects.create(
+                total=subtotal,
+                fecha=ahora,
+                cliente=cliente,
+                cotizacion=cotizacion,
+            )
+
+            for unidad in unidades:
+                DetalleHospedaje.objects.create(
+                    id_hospedaje=hospedaje,
+                    id_habitaciones=unidad.id_habitaciones,
+                    id_unidad=unidad,
+                    fecha_check_in=fecha_entrada,
+                    fecha_check_out=fecha_salida,
+                )
+
+        return JsonResponse({
+            "ok": True,
+            "mensaje": "La cotización se guardó correctamente.",
+            "numero_cotizacion": numero,
+            "total": str(subtotal),
+            "noches": noches,
+        })
+
+    except (InvalidOperation, TypeError, ValueError):
+        return JsonResponse({
+            "ok": False,
+            "error": "No se pudo calcular el total. Revisa los precios de las habitaciones."
+        }, status=400)
+
+    
+    except Exception as error:
+        import logging
+        logging.exception("Error guardando cotización de hospedaje")
+
+        return JsonResponse({
+            "ok": False,
+            "error": str(error),
+        }, status=500)
+
