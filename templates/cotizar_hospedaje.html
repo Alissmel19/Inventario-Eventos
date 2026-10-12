@@ -1,0 +1,263 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotización de hospedaje | BERAKÁ</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f0e3;
+            color: #17382c;
+            margin: 0;
+            padding: 30px 16px;
+        }
+
+        .contenedor {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        .panel {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 22px;
+            box-shadow: 0 3px 12px #00000012;
+        }
+
+        h1, h2 {
+            color: #17382c;
+        }
+
+        .fechas {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input, button {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        input {
+            border: 1px solid #ccc;
+        }
+
+        button {
+            border: none;
+            background: #17382c;
+            color: white;
+            cursor: pointer;
+            margin-top: 18px;
+        }
+
+        button:hover {
+            background: #28523f;
+        }
+
+        .habitacion {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 12px;
+        }
+
+        .habitacion input {
+            width: auto;
+        }
+
+        .mensaje {
+            margin-top: 16px;
+            font-weight: bold;
+        }
+
+        .precio {
+            color: #8b7136;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+<div class="contenedor">
+    <h1>Cotización de hospedaje</h1>
+    <p>Consulta la disponibilidad y selecciona las habitaciones
+       para tu estadía en BERAKÁ.</p>
+
+    <section class="panel">
+        <h2>1. Fechas de estadía</h2>
+
+        <div class="fechas">
+            <div>
+                <label for="fechaEntrada">Fecha de entrada</label>
+                <input type="date" id="fechaEntrada" required>
+            </div>
+
+            <div>
+                <label for="fechaSalida">Fecha de salida</label>
+                <input type="date" id="fechaSalida" required>
+            </div>
+        </div>
+
+        <button type="button" id="btnConsultar">
+            Consultar disponibilidad
+        </button>
+
+        <p id="mensaje" class="mensaje" aria-live="polite"></p>
+    </section>
+
+    <section class="panel">
+        <h2>2. Habitaciones disponibles</h2>
+        <div id="listaHabitaciones">
+            Selecciona las fechas para consultar las habitaciones.
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>3. Resumen de la estadía</h2>
+        <p>Noches: <strong id="totalNoches">0</strong></p>
+        <p>Habitaciones seleccionadas:
+            <strong id="cantidadHabitaciones">0</strong>
+        </p>
+        <p>Total estimado:
+            <strong id="totalEstimado">$0.00</strong>
+        </p>
+        <p>
+            Este es un cálculo preliminar. Todavía no guarda una
+            cotización ni reserva habitaciones.
+        </p>
+    </section>
+</div>
+
+<script>
+    const entrada = document.getElementById("fechaEntrada");
+    const salida = document.getElementById("fechaSalida");
+    const lista = document.getElementById("listaHabitaciones");
+    const mensaje = document.getElementById("mensaje");
+
+    let habitaciones = [];
+
+    document.getElementById("btnConsultar").addEventListener("click", consultar);
+
+    async function consultar() {
+        lista.replaceChildren();
+        habitaciones = [];
+        actualizarResumen();
+
+        if (!entrada.value || !salida.value) {
+            mensaje.textContent = "Selecciona ambas fechas.";
+            return;
+        }
+
+        if (salida.value <= entrada.value) {
+            mensaje.textContent =
+                "La salida debe ser posterior a la entrada.";
+            return;
+        }
+
+        mensaje.textContent = "Consultando disponibilidad...";
+
+        const params = new URLSearchParams({
+            fecha_entrada: entrada.value,
+            fecha_salida: salida.value
+        });
+
+        try {
+            const respuesta = await fetch(
+                `/hospedaje/disponibilidad/?${params.toString()}`
+            );
+
+            const datos = await respuesta.json();
+
+            if (!respuesta.ok || !datos.ok) {
+                throw new Error(datos.error || "No se pudo consultar.");
+            }
+
+            habitaciones = datos.habitaciones;
+
+            if (habitaciones.length === 0) {
+                mensaje.textContent =
+                    "No hay habitaciones disponibles para esas fechas.";
+                lista.textContent = "Prueba con otras fechas.";
+                return;
+            }
+
+            mensaje.textContent =
+                `Encontramos ${habitaciones.length} habitaciones disponibles.`;
+
+            habitaciones.forEach(h => {
+                const tarjeta = document.createElement("div");
+                tarjeta.className = "habitacion";
+
+                const check = document.createElement("input");
+                check.type = "checkbox";
+                check.value = h.id_unidad;
+                check.dataset.precio = h.precio_noche;
+                check.className = "seleccion-habitacion";
+                check.id = `habitacion-${h.id_unidad}`;
+                check.addEventListener("change", actualizarResumen);
+
+                const label = document.createElement("label");
+                label.htmlFor = check.id;
+                label.style.display = "inline";
+                label.textContent = ` ${h.nombre} — ${h.tipo}`;
+
+                const detalle = document.createElement("p");
+                detalle.textContent = `Capacidad: ${h.capacidad} personas`;
+
+                const precio = document.createElement("p");
+                precio.className = "precio";
+                precio.textContent =
+                    `$${Number(h.precio_noche).toFixed(2)} por noche`;
+
+                tarjeta.append(check, label, detalle, precio);
+                lista.appendChild(tarjeta);
+            });
+
+            actualizarResumen();
+
+        } catch (error) {
+            mensaje.textContent = error.message;
+        }
+    }
+
+    function actualizarResumen() {
+        const seleccionadas = [
+            ...document.querySelectorAll(".seleccion-habitacion:checked")
+        ];
+
+        let noches = 0;
+
+        if (entrada.value && salida.value && salida.value > entrada.value) {
+            const inicio = new Date(`${entrada.value}T00:00:00`);
+            const fin = new Date(`${salida.value}T00:00:00`);
+            noches = Math.round((fin - inicio) / 86400000);
+        }
+
+        const total = seleccionadas.reduce((suma, h) => {
+            return suma + Number(h.dataset.precio) * noches;
+        }, 0);
+
+        document.getElementById("totalNoches").textContent = noches;
+        document.getElementById("cantidadHabitaciones").textContent =
+            seleccionadas.length;
+        document.getElementById("totalEstimado").textContent =
+            `$${total.toFixed(2)}`;
+    }
+</script>
+</body>
+</html>

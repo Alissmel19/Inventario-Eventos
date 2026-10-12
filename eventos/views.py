@@ -1,4 +1,7 @@
 import json
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
+
 
 from decimal import Decimal, InvalidOperation
 
@@ -9,9 +12,13 @@ from django.http import JsonResponse
 from django.db import transaction
 
 from django.utils import timezone
+from django.utils.dateparse import parse_date
+from django.views.decorators.http import require_GET
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+
+from .models import HabitacionesUnidades, DetalleHospedaje
 
 from .models import (
 
@@ -577,6 +584,17 @@ def nueva_cotizacion(request):
 
             hora_fin = data.get("hora_fin") or None
 
+            # Validar que la hora final sea posterior a la inicial
+            if hora_inicio and hora_fin:
+                hora_inicio_obj = datetime.strptime(hora_inicio, "%H:%M").time()
+                hora_fin_obj = datetime.strptime(hora_fin, "%H:%M").time()
+
+                if hora_inicio_obj >= hora_fin_obj:
+                    return JsonResponse({
+                        "ok": False,
+                        "error": "La hora de finalización debe ser posterior a la hora de inicio."
+                    }, status=400)
+
             lugar_nombre = (data.get("lugar") or "").strip()
 
             observaciones = (data.get("observaciones") or "").strip()
@@ -713,53 +731,84 @@ def nueva_cotizacion(request):
 
             # Paquete estándar: $21.50 por persona
 
-            if paquete_id == "4":
+                    
+            
+            # Paquete estándar: $21.50 por persona
+            
+# Calcular el precio del paquete seleccionado
+            # Calcular el precio del paquete seleccionado
+            precios_paquetes = {
+                "1": Decimal("37.50"),  # Evento privado premium
+                "4": Decimal("21.50"),  # Evento privado estándar
+            }
 
-                subtotal = (
+            if paquete_id in precios_paquetes:
+                precio_persona = precios_paquetes[paquete_id]
 
-                    Decimal("21.50") * personas
-
+                subtotal_paquete = (
+                    precio_persona * Decimal(personas)
                 ).quantize(Decimal("0.01"))
 
-                detalles = [{
-
-                    "nombre": "Paquete privado estándar",
-
+                detalles_paquete = {
+                    "nombre": (
+                        "Evento privado premium"
+                        if paquete_id == "1"
+                        else "Paquete privado estándar"
+                    ),
                     "tipo": "Paquete",
-
                     "unidad": "persona",
-
                     "cantidad": Decimal(personas),
+                    "precio": precio_persona,
+                    "subtotal": subtotal_paquete,
+                }
 
-                    "precio": Decimal("21.50"),
+                detalles_incluidos = []
 
-                    "subtotal": subtotal,
+                for concepto in conceptos:
+                    nombre = str(concepto.get("nombre") or "").strip()
 
-                }]
+                    if not nombre:
+                        continue
 
-            descuento = min(descuento, subtotal)
+                    cantidad = Decimal(
+                        str(concepto.get("cantidad") or "1")
+                    )
+                    precio = Decimal(
+                        str(concepto.get("precio") or "0")
+                    )
 
+                    if cantidad <= 0 or precio < 0:
+                        return JsonResponse({
+                            "ok": False,
+                            "error": "Hay un concepto con datos inválidos."
+                        }, status=400)
+
+                    detalles_incluidos.append({
+                        "nombre": nombre[:250],
+                        "tipo": str(concepto.get("tipo") or ""),
+                        "unidad": str(
+                            concepto.get("unidad") or "unidad"
+                        )[:50],
+                        "cantidad": cantidad,
+                        "precio": precio,
+                        "subtotal": Decimal("0.00"),
+                    })
+
+                detalles = [detalles_paquete] + detalles_incluidos
+                subtotal = subtotal_paquete
+
+            # Aplicar descuento y calcular propina
             base = max(subtotal - descuento, Decimal("0.00"))
 
-            # Propina para paquetes por consumo
-
             if paquete_id in ("2", "3"):
-
                 monto_propina = (
-
                     base * porcentaje_propina / Decimal("100")
-
                 ).quantize(Decimal("0.01"))
-
             else:
-
                 porcentaje_propina = Decimal("0.00")
-
                 monto_propina = Decimal("0.00")
 
-            total = base + monto_propina
-
-            # Guardar todo dentro de una transacción
+            total = base + monto_propina            # Guardar todo dentro de una transacción
 
             with transaction.atomic():
 
@@ -777,6 +826,10 @@ def nueva_cotizacion(request):
 
                     fecha_registro=timezone.now(),
 
+                )
+
+                estado_evento = EstadosEvento.objects.get(
+                    nombre__iexact="Pendiente"
                 )
 
                 evento = Eventos.objects.create(
@@ -800,11 +853,9 @@ def nueva_cotizacion(request):
                     cantidad_adultos=personas,
 
                     cantidad_ninos=0,
-
-                    total_invitados=personas,
-
+                    
                     observaciones=observaciones,
-
+                    
                     fecha_creacion=timezone.now(),
 
                 )
@@ -861,7 +912,7 @@ def nueva_cotizacion(request):
 
                     total=total,
 
-                    estado="Pendiente",
+                    estado="Borrador",
 
                     observaciones=(
 
@@ -877,31 +928,29 @@ def nueva_cotizacion(request):
 
                 )
 
+                
                 for detalle in detalles:
+                    tipo_concepto = str(detalle.get("tipo", "")).strip().lower()
+
+                    # Por ahora, solo vinculamos elementos de montaje
+                    # cuando tengamos confirmado su ID real.
+                    elemento_montaje = None
 
                     DetalleCotizacion.objects.create(
-
                         cotizacion=cotizacion,
-
                         producto_evento_id=None,
-
-                        elemento_montaje=None,
-
+                        elemento_montaje=elemento_montaje,
                         concepto=detalle["nombre"],
-
                         descripcion=detalle["tipo"],
-
                         cantidad=detalle["cantidad"],
-
                         unidad=detalle["unidad"],
-
                         precio_unitario=detalle["precio"],
-
                         subtotal=detalle["subtotal"],
-
                         observaciones="",
-
                     )
+
+
+
 
             return JsonResponse({
 
@@ -945,16 +994,14 @@ def nueva_cotizacion(request):
 
             }, status=400)
 
-        except (ValueError, InvalidOperation, TypeError):
+        except (ValueError, InvalidOperation, TypeError) as error:
+            import logging
+            logging.exception("Error de validación al guardar cotización")
 
             return JsonResponse({
-
                 "ok": False,
-
-                "error": "Revisa los números, la fecha y los datos ingresados."
-
+                "error": f"{type(error).__name__}: {str(error)}"
             }, status=400)
-
         except Exception as error:
 
             return JsonResponse({
@@ -969,7 +1016,7 @@ def nueva_cotizacion(request):
 
     # GET: mostrar el formulario y cargar el catálogo
 
-    import json
+  
 
     areas = AreasEvento.objects.filter(
 
@@ -1340,3 +1387,69 @@ def registro_eventos(request):
         context
 
     )
+
+
+
+
+@login_required(login_url="login")
+@require_GET
+def habitaciones_disponibles(request):
+    fecha_entrada = parse_date(
+        request.GET.get("fecha_entrada", "")
+    )
+    fecha_salida = parse_date(
+        request.GET.get("fecha_salida", "")
+    )
+
+    if not fecha_entrada or not fecha_salida:
+        return JsonResponse({
+            "ok": False,
+            "error": "Ingresá las fechas de entrada y salida."
+        }, status=400)
+
+    if fecha_salida <= fecha_entrada:
+        return JsonResponse({
+            "ok": False,
+            "error": "La salida debe ser posterior a la entrada."
+        }, status=400)
+
+    # Buscar habitaciones ocupadas por reservas aceptadas
+    ocupadas = DetalleHospedaje.objects.filter(
+        fecha_check_in__lt=fecha_salida,
+        fecha_check_out__gt=fecha_entrada,
+        id_unidad__isnull=False,
+        id_hospedaje__cotizacion__estado="Aceptada",
+    ).values_list("id_unidad_id", flat=True)
+
+    disponibles = (
+        HabitacionesUnidades.objects
+        .filter(activa=True)
+        .exclude(id_unidad__in=ocupadas)
+        .select_related("id_habitaciones")
+        .order_by("id_unidad")
+    )
+
+    habitaciones = [
+        {
+            "id_unidad": unidad.id_unidad,
+            "nombre": unidad.nombre_unidad,
+            "tipo": unidad.id_habitaciones.nombre,
+            "capacidad": unidad.id_habitaciones.capacidad,
+            "precio_noche": str(unidad.id_habitaciones.precio),
+        }
+        for unidad in disponibles
+    ]
+
+    return JsonResponse({
+        "ok": True,
+        "fecha_entrada": fecha_entrada.isoformat(),
+        "fecha_salida": fecha_salida.isoformat(),
+        "total_disponibles": len(habitaciones),
+        "habitaciones": habitaciones,
+    })
+
+
+
+@login_required(login_url="login")
+def cotizar_hospedaje(request):
+    return render(request, "cotizar_hospedaje.html")

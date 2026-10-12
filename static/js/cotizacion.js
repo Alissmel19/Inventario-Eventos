@@ -227,7 +227,7 @@ function filtrarServicios() {
    AGREGAR CONCEPTOS
 ========================================================= */
 
-function agregarConcepto(nombre, tipo, precio, unidad) {
+function agregarConcepto(id, nombre, tipo, precio, unidad) {
     if (!paqueteSeleccionado) {
         alert("Primero selecciona un paquete.");
         return;
@@ -243,6 +243,7 @@ function agregarConcepto(nombre, tipo, precio, unidad) {
     const personas = obtenerPersonas();
 
     conceptos.push({
+        catalogo_id: Number(id),
         nombre: String(nombre),
         tipo: String(tipo || ""),
         precio: precioNumero,
@@ -253,7 +254,7 @@ function agregarConcepto(nombre, tipo, precio, unidad) {
     renderizarConceptos();
 }
 
-function agregarVariable(nombre, precio, unidad) {
+function agregarVariable(id, nombre, precio, unidad) {
     if (!paqueteSeleccionado) {
         alert("Primero selecciona un paquete.");
         return;
@@ -269,6 +270,7 @@ function agregarVariable(nombre, precio, unidad) {
     const personas = obtenerPersonas();
 
     conceptos.push({
+        catalogo_id: Number(id),
         nombre: String(nombre),
         tipo: "Servicio opcional",
         precio: precioNumero,
@@ -579,13 +581,16 @@ async function generarCotizacion() {
         paquete_id: paqueteSeleccionado,
         paquete_nombre: paquete.nombre,
 
+
         conceptos: conceptos.map(concepto => ({
-            nombre: concepto.nombre,
-            tipo: concepto.tipo,
-            precio: Number(concepto.precio),
-            unidad: concepto.unidad,
-            cantidad: Number(concepto.cantidad)
-        })),
+        catalogo_id: concepto.catalogo_id,
+        nombre: concepto.nombre,
+        tipo: concepto.tipo,
+        precio: Number(concepto.precio),
+        unidad: concepto.unidad,
+        cantidad: Number(concepto.cantidad)
+    })),
+
 
         subtotal: totales.subtotal,
         descuento: totales.descuento,

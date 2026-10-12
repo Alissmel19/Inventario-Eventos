@@ -1,4 +1,4 @@
-# This is an auto-generated Django model module.
+﻿# This is an auto-generated Django model module.
 # You'll have to do the following manually to clean this up:
 #   * Rearrange models' order
 #   * Make sure each model has one field with primary_key=True
@@ -151,7 +151,12 @@ class Cortesia(models.Model):
 
 class Cotizaciones(models.Model):
     cotizacion_id = models.AutoField(primary_key=True)
-    evento = models.ForeignKey('Eventos', models.DO_NOTHING)
+    evento = models.ForeignKey(
+    'Eventos',
+    on_delete=models.PROTECT,
+    db_column='evento_id',
+    null=True,
+    blank=True)
     numero_cotizacion = models.CharField(unique=True, max_length=50)
     fecha = models.DateField()
     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
@@ -182,17 +187,43 @@ class DecoracionesEvento(models.Model):
         db_table = 'decoraciones_evento'
 
 
+
 class DetalleHospedaje(models.Model):
-    id_detalle_hospedaje = models.IntegerField(primary_key=True)
+    id_detalle_hospedaje = models.AutoField(primary_key=True)
+
     check_in = models.TimeField(blank=True, null=True)
     check_out = models.TimeField(blank=True, null=True)
-    id_hospedaje = models.ForeignKey('Hospedaje', models.DO_NOTHING, db_column='id_hospedaje', blank=True, null=True)
-    id_habitaciones = models.ForeignKey('Habitaciones', models.DO_NOTHING, db_column='id_habitaciones', blank=True, null=True)
+
+    fecha_check_in = models.DateField(blank=True, null=True)
+    fecha_check_out = models.DateField(blank=True, null=True)
+
+    id_hospedaje = models.ForeignKey(
+        'Hospedaje',
+        models.DO_NOTHING,
+        db_column='id_hospedaje',
+        blank=True,
+        null=True
+    )
+
+    id_habitaciones = models.ForeignKey(
+        'Habitaciones',
+        models.DO_NOTHING,
+        db_column='id_habitaciones',
+        blank=True,
+        null=True
+    )
+
+    id_unidad = models.ForeignKey(
+        'HabitacionesUnidades',
+        models.DO_NOTHING,
+        db_column='id_unidad',
+        blank=True,
+        null=True
+    )
 
     class Meta:
         managed = False
         db_table = 'detalle_hospedaje'
-
 
 class DetalleCotizacion(models.Model):
     detalle_cotizacion_id = models.AutoField(primary_key=True)
@@ -337,7 +368,11 @@ class Eventos(models.Model):
     hora_inicio_montaje = models.TimeField(blank=True, null=True)
     cantidad_adultos = models.IntegerField()
     cantidad_ninos = models.IntegerField()
-    total_invitados = models.IntegerField(blank=True, null=True)
+    total_invitados = models.GeneratedField(
+    expression=models.F("cantidad_adultos") + models.F("cantidad_ninos"),
+    output_field=models.IntegerField(),
+    db_persist=True,
+    )
     observaciones = models.TextField(blank=True, null=True)
     fecha_creacion = models.DateTimeField()
 
@@ -359,11 +394,47 @@ class Habitaciones(models.Model):
         db_table = 'habitaciones'
 
 
+class HabitacionesUnidades(models.Model):
+    id_unidad = models.AutoField(primary_key=True)
+    id_habitaciones = models.ForeignKey(
+        'Habitaciones',
+        models.DO_NOTHING,
+        db_column='id_habitaciones'
+    )
+    nombre_unidad = models.CharField(max_length=100, unique=True)
+    activa = models.BooleanField(default=True)
+
+    class Meta:
+        managed = False
+        db_table = 'habitaciones_unidades'
+
+
 class Hospedaje(models.Model):
-    id_hospedaje = models.IntegerField(primary_key=True)
-    total = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    fecha = models.DateTimeField(blank=True, null=True)
-    cliente = models.ForeignKey(Clientes, models.DO_NOTHING, blank=True, null=True)
+    id_hospedaje = models.AutoField(primary_key=True)
+    total = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
+    fecha = models.DateTimeField(
+        blank=True,
+        null=True
+    )
+    cliente = models.ForeignKey(
+        'Clientes',
+        models.DO_NOTHING,
+        db_column='cliente_id',
+        blank=True,
+        null=True
+    )
+    cotizacion = models.ForeignKey(
+        'Cotizaciones',
+        models.DO_NOTHING,
+        db_column='cotizacion_id',
+        blank=True,
+        null=True
+    )
 
     class Meta:
         managed = False
