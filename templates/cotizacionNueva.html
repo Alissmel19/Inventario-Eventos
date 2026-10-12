@@ -440,19 +440,19 @@
 
         {% for paquete in paquetes %}
 
+                
         <label class="package-option">
-
             <input
-
                 type="radio"
-
                 name="paquete"
-
                 value="{{ paquete.id }}"
-
+                data-nombre="{{ paquete.nombre }}"
+                data-descripcion="{{ paquete.descripcion }}"
                 onchange="seleccionarPaquete('{{ paquete.id }}')"
-
             >
+
+
+
 
             <div>
 
