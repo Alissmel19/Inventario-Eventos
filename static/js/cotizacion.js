@@ -8,24 +8,7 @@
 let conceptos = [];
 let paqueteSeleccionado = null;
 
-const paquetes = window.PAQUETES_BERAKA || {
-    "1": {
-        nombre: "Evento privado premium",
-        descripcion: "Menú VIP y servicios exclusivos."
-    },
-    "2": {
-        nombre: "Evento corporativo",
-        descripcion: "Consumo y servicios para eventos corporativos."
-    },
-    "3": {
-        nombre: "Evento por consumo",
-        descripcion: "Se cobra según los conceptos seleccionados."
-    },
-    "4": {
-        nombre: "Evento privado estándar",
-        descripcion: "Paquete estándar de $21.50 por persona."
-    }
-};
+const paquetes = window.PAQUETES_BERAKA || {};
 
 function dinero(valor) {
     return "$" + (Number(valor) || 0).toFixed(2);
@@ -36,22 +19,68 @@ function obtenerValor(id) {
 }
 
 function obtenerPersonas() {
-    return Math.max(
-        1,
-        parseInt(obtenerValor("personas"), 10) || 1
-    );
+    return Math.max(1, parseInt(obtenerValor("personas"), 10) || 1);
 }
 
 /* =========================================================
-   SELECCIÓN DE PAQUETE
+   PAQUETES
 ========================================================= */
 
+function obtenerRadioPaquete(id) {
+    return Array.from(
+        document.querySelectorAll('input[name="paquete"]')
+    ).find(radio => String(radio.value) === String(id));
+}
+
+function obtenerPaqueteActual(id) {
+    const radio = obtenerRadioPaquete(id);
+    const tarjeta = radio?.closest(".package-option");
+    const configurado = paquetes[String(id)] || {};
+
+    return {
+        ...configurado,
+        nombre:
+            radio?.dataset.nombre ||
+            tarjeta?.querySelector("h3")?.textContent?.trim() ||
+            configurado.nombre ||
+            "Paquete seleccionado",
+        descripcion:
+            radio?.dataset.descripcion ||
+            tarjeta?.querySelector("p")?.textContent?.trim() ||
+            configurado.descripcion ||
+            ""
+    };
+}
+
+function nombrePaqueteActual() {
+    if (!paqueteSeleccionado) return "";
+
+    return String(
+        obtenerPaqueteActual(paqueteSeleccionado).nombre || ""
+    ).toLowerCase();
+}
+
+function esPaqueteEstandar() {
+    const nombre = nombrePaqueteActual();
+
+    return nombre.includes("estándar") ||
+           nombre.includes("estandar");
+}
+
+function llevaPropina() {
+    const nombre = nombrePaqueteActual();
+
+    return nombre.includes("consumo") ||
+           nombre.includes("corporativo");
+}
 
 function seleccionarPaquete(id) {
     id = String(id);
 
-    if (!paquetes[id]) {
-        console.warn("Paquete no reconocido:", id);
+    const radioActual = obtenerRadioPaquete(id);
+
+    if (!radioActual) {
+        console.warn("No se encontró el paquete:", id);
         return;
     }
 
@@ -60,14 +89,18 @@ function seleccionarPaquete(id) {
         paqueteSeleccionado !== id &&
         conceptos.length > 0
     ) {
-        if (!confirm(
-            "Cambiar de paquete eliminará los conceptos agregados. ¿Continuar?"
-        )) {
-            const radioAnterior = document.querySelector(
-                `input[name="paquete"][value="${paqueteSeleccionado}"]`
+        const continuar = confirm(
+            "Cambiar de paquete eliminará los conceptos agregados. ¿Deseas continuar?"
+        );
+
+        if (!continuar) {
+            const radioAnterior = obtenerRadioPaquete(
+                paqueteSeleccionado
             );
 
             if (radioAnterior) radioAnterior.checked = true;
+            radioActual.checked = false;
+
             return;
         }
 
@@ -75,8 +108,9 @@ function seleccionarPaquete(id) {
     }
 
     paqueteSeleccionado = id;
+    radioActual.checked = true;
 
-    const paquete = paquetes[id];
+    const paquete = obtenerPaqueteActual(id);
     const info = document.getElementById("packageInfo");
 
     if (info) {
@@ -86,7 +120,7 @@ function seleccionarPaquete(id) {
         titulo.textContent = paquete.nombre;
 
         const descripcion = document.createElement("p");
-        descripcion.textContent = paquete.descripcion || "";
+        descripcion.textContent = paquete.descripcion;
 
         info.append(titulo, descripcion);
     }
@@ -98,18 +132,14 @@ function seleccionarPaquete(id) {
     if (categoria) categoria.value = "todas";
 
     actualizarVisibilidadPropina();
-    actualizarPaqueteSeleccionado();
     filtrarCatalogo();
     filtrarServicios();
-    renderizarDetalle();
-    calcularTotales();
     renderizarConceptos();
-
-    console.log("Paquete seleccionado:", paquete);
+    calcularTotales();
 }
 
 /* =========================================================
-   CATÁLOGO: PLATILLOS, BEBIDAS Y SERVICIOS
+   CATÁLOGO Y FILTROS
 ========================================================= */
 
 function esPremium(elemento) {
@@ -120,15 +150,15 @@ function esPremium(elemento) {
            nombre.includes("premium");
 }
 
-
 function esPlatilloEstandar(elemento) {
     const tipo = (elemento.dataset.tipo || "")
         .trim()
         .toLowerCase();
 
-    return tipo.includes("standard");
+    return tipo.includes("standard") ||
+           tipo.includes("estándar") ||
+           tipo.includes("estandar");
 }
-
 
 function filtrarCatalogo() {
     const texto = (
@@ -139,36 +169,24 @@ function filtrarCatalogo() {
         document.getElementById("categoryFilter")?.value || "todas"
     ).toLowerCase().trim();
 
-    // Usar el ID que guarda seleccionarPaquete()
-    const idPaquete = String(paqueteSeleccionado || "");
-    const paquete = paquetes[idPaquete];
-
-    const nombrePaquete = (paquete?.nombre || "").toLowerCase();
-
-    const esEstandar = nombrePaquete.includes("estándar") ||
-                       nombrePaquete.includes("estandar");
-
-    const esPremium = nombrePaquete.includes("premium");
+    const nombrePaquete = nombrePaqueteActual();
+    const esEstandar = esPaqueteEstandar();
+    const esPaquetePremium = nombrePaquete.includes("premium");
 
     let visibles = 0;
 
     document.querySelectorAll(".catalog-item").forEach(item => {
         const nombre = (item.dataset.nombre || "")
-            .toLowerCase()
-            .trim();
+            .toLowerCase().trim();
 
         const tipo = (item.dataset.tipo || "")
-            .toLowerCase()
-            .trim();
+            .toLowerCase().trim();
 
         let permitido = true;
 
         if (esEstandar) {
-            permitido =
-                tipo.includes("standard") ||
-                tipo.includes("estándar") ||
-                tipo.includes("estandar");
-        } else if (esPremium) {
+            permitido = esPlatilloEstandar(item);
+        } else if (esPaquetePremium) {
             permitido = tipo.includes("premium");
         }
 
@@ -191,9 +209,6 @@ function filtrarCatalogo() {
     if (empty) {
         empty.style.display = visibles ? "none" : "block";
     }
-
-    console.log("Paquete:", nombrePaquete);
-    console.log("Platillos visibles:", visibles);
 }
 
 window.filtrarCatalogo = filtrarCatalogo;
@@ -204,7 +219,6 @@ window.filtrarCatalogo = filtrarCatalogo;
 
 function filtrarServicios() {
     document.querySelectorAll(".variable-card").forEach(elemento => {
-        // No ocultamos los opcionales al seleccionar un paquete.
         elemento.style.display = "";
     });
 }
@@ -317,7 +331,7 @@ function actualizarPersonas() {
 }
 
 /* =========================================================
-   CONSTRUIR TABLA DE COTIZACIÓN
+   TABLA DE COTIZACIÓN
 ========================================================= */
 
 function crearCelda(texto) {
@@ -363,7 +377,11 @@ function renderizarConceptos() {
         const tipo = document.createElement("small");
         tipo.textContent = concepto.tipo;
 
-        celdaNombre.append(nombre, document.createElement("br"), tipo);
+        celdaNombre.append(
+            nombre,
+            document.createElement("br"),
+            tipo
+        );
 
         const celdaCantidad = document.createElement("td");
 
@@ -388,8 +406,8 @@ function renderizarConceptos() {
         );
 
         const celdaTotal = document.createElement("td");
-
         const total = document.createElement("strong");
+
         total.textContent = dinero(
             concepto.precio * concepto.cantidad
         );
@@ -397,12 +415,14 @@ function renderizarConceptos() {
         celdaTotal.appendChild(total);
 
         const celdaEliminar = document.createElement("td");
-
         const boton = document.createElement("button");
+
         boton.type = "button";
         boton.className = "delete-btn";
         boton.textContent = "Eliminar";
-        boton.addEventListener("click", () => eliminarConcepto(index));
+        boton.addEventListener("click", () => {
+            eliminarConcepto(index);
+        });
 
         celdaEliminar.appendChild(boton);
 
@@ -422,11 +442,11 @@ function renderizarConceptos() {
 }
 
 /* =========================================================
-   CÁLCULOS
+   CÁLCULOS Y PROPINA
 ========================================================= */
 
 function actualizarVisibilidadPropina() {
-    const mostrar = ["2", "3"].includes(paqueteSeleccionado);
+    const mostrar = llevaPropina();
 
     const filaPropina = document.getElementById("filaPropina");
     const filaMonto = document.getElementById("filaMontoPropina");
@@ -450,8 +470,8 @@ function calcularTotales() {
         return suma + concepto.precio * concepto.cantidad;
     }, 0);
 
-    // Paquete estándar: tarifa fija de $21.50 por invitado.
-    if (paqueteSeleccionado === "4") {
+    // Evento privado estándar: $21.50 por persona.
+    if (esPaqueteEstandar()) {
         subtotal = 21.50 * obtenerPersonas();
     }
 
@@ -462,10 +482,9 @@ function calcularTotales() {
 
     const base = Math.max(0, subtotal - descuento);
 
-    const porcentajePropina =
-        ["2", "3"].includes(paqueteSeleccionado)
-            ? Math.max(0, Number(obtenerValor("propina")) || 0)
-            : 0;
+    const porcentajePropina = llevaPropina()
+        ? Math.max(0, Number(obtenerValor("propina")) || 0)
+        : 0;
 
     const propina = base * porcentajePropina / 100;
     const total = base + propina;
@@ -512,7 +531,7 @@ function obtenerCookie(nombre) {
 }
 
 /* =========================================================
-   GUARDAR COTIZACIÓN EN DJANGO
+   GUARDAR COTIZACIÓN
 ========================================================= */
 
 async function generarCotizacion() {
@@ -532,20 +551,18 @@ async function generarCotizacion() {
         return;
     }
 
-    if (!conceptos.length && paqueteSeleccionado !== "4") {
+    if (!conceptos.length && !esPaqueteEstandar()) {
         alert("Agrega al menos un concepto a la cotización.");
         return;
     }
 
     const totales = calcularTotales();
 
-    const radioPaquete = document.querySelector(
-        'input[name="paquete"]:checked'
-    );
-
     const boton = document.querySelector(
         'button[onclick="generarCotizacion()"]'
     );
+
+    const paquete = obtenerPaqueteActual(paqueteSeleccionado);
 
     const payload = {
         cliente,
@@ -560,10 +577,8 @@ async function generarCotizacion() {
         direccion: obtenerValor("direccionEvento"),
         observaciones: obtenerValor("observaciones"),
         paquete_id: paqueteSeleccionado,
-        paquete_nombre:
-            radioPaquete?.dataset.nombre ||
-            paquetes[paqueteSeleccionado]?.nombre ||
-            "",
+        paquete_nombre: paquete.nombre,
+
         conceptos: conceptos.map(concepto => ({
             nombre: concepto.nombre,
             tipo: concepto.tipo,
@@ -571,6 +586,7 @@ async function generarCotizacion() {
             unidad: concepto.unidad,
             cantidad: Number(concepto.cantidad)
         })),
+
         subtotal: totales.subtotal,
         descuento: totales.descuento,
         porcentaje_propina: totales.porcentajePropina,
@@ -603,7 +619,8 @@ async function generarCotizacion() {
 
         if (!respuesta.ok || !resultado.ok) {
             throw new Error(
-                resultado.error || "No se pudo guardar la cotización."
+                resultado.error ||
+                "No se pudo guardar la cotización."
             );
         }
 
@@ -617,7 +634,11 @@ async function generarCotizacion() {
 
     } catch (error) {
         console.error("Error guardando cotización:", error);
-        alert("No se pudo guardar la cotización:\n" + error.message);
+
+        alert(
+            "No se pudo guardar la cotización:\n" +
+            error.message
+        );
 
     } finally {
         if (boton) {
@@ -632,13 +653,11 @@ async function generarCotizacion() {
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
-    // El catálogo y los servicios opcionales aparecen al cargar.
     filtrarCatalogo();
     filtrarServicios();
     actualizarVisibilidadPropina();
     renderizarConceptos();
 
-    // Recalcular si se modifica el descuento o la propina.
     document.getElementById("descuento")
         ?.addEventListener("input", calcularTotales);
 
@@ -646,9 +665,8 @@ document.addEventListener("DOMContentLoaded", () => {
         ?.addEventListener("input", calcularTotales);
 
     document.getElementById("personas")
-        ?.addEventListener("change", actualizarPersonas);
+        ?.addEventListener("input", actualizarPersonas);
 
-    // Seleccionar el paquete marcado, si existe.
     const seleccionado = document.querySelector(
         'input[name="paquete"]:checked'
     );
