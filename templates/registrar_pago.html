@@ -1,0 +1,633 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar pago | BERAKÁ</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --verde: #234d3a;
+            --verde-oscuro: #183629;
+            --dorado: #c6a45b;
+            --beige: #f6f1e7;
+            --texto: #353a35;
+            --borde: #e5dfd2;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f8f7f3;
+            color: var(--texto);
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* NAVBAR BERAKÁ */
+        .navbar-beraka {
+            background: var(--verde-oscuro);
+            border-bottom: 3px solid var(--dorado);
+            padding: 13px 0;
+        }
+
+        .navbar-brand {
+            color: #fff !important;
+            font-family: Georgia, serif;
+            font-size: 25px;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        .brand-subtitle {
+            display: block;
+            color: #d9c28d;
+            font-family: Arial, sans-serif;
+            font-size: 9px;
+            letter-spacing: 3px;
+            text-align: center;
+            margin-top: -3px;
+        }
+
+        .navbar-beraka .nav-link {
+            color: #f8f5ed;
+            padding: 10px 13px !important;
+            font-size: 14px;
+            transition: .2s;
+        }
+
+        .navbar-beraka .nav-link:hover,
+        .navbar-beraka .nav-link.active {
+            color: #e0c47f;
+        }
+
+        .navbar-toggler {
+            border-color: #c6a45b;
+        }
+
+        .navbar-toggler-icon {
+            filter: brightness(0) invert(1);
+        }
+
+        main {
+            flex: 1;
+            padding: 38px 15px 55px;
+        }
+
+        .page-heading {
+            margin-bottom: 27px;
+        }
+
+        .eyebrow {
+            color: #92743b;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .page-heading h1 {
+            color: var(--verde);
+            font-family: Georgia, serif;
+            font-size: clamp(28px, 4vw, 38px);
+            font-weight: bold;
+            margin: 7px 0;
+        }
+
+        .page-heading p {
+            color: #77786f;
+            margin: 0;
+        }
+
+        .payment-card {
+            background: white;
+            border: 1px solid var(--borde);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(36, 52, 40, .06);
+        }
+
+        .card-heading {
+            background: var(--beige);
+            padding: 20px 25px;
+            border-bottom: 1px solid var(--borde);
+        }
+
+        .card-heading h2 {
+            color: var(--verde);
+            font-size: 19px;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .card-body-custom {
+            padding: 28px;
+        }
+
+        .form-label {
+            font-weight: 600;
+            font-size: 13px;
+            color: #41463f;
+            margin-bottom: 8px;
+        }
+
+        .form-control,
+        .form-select {
+            border: 1px solid #dcd9cf;
+            border-radius: 9px;
+            padding: 12px;
+            font-size: 14px;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--dorado);
+            box-shadow: 0 0 0 3px rgba(198, 164, 91, .15);
+        }
+
+        .summary-box {
+            background: var(--beige);
+            border: 1px solid #e8dfca;
+            border-radius: 12px;
+            padding: 20px;
+            height: 100%;
+        }
+
+        .summary-label {
+            color: #77786f;
+            font-size: 12px;
+        }
+
+        .summary-value {
+            color: var(--verde);
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+
+        .deposit-value {
+            color: #96712e;
+        }
+
+        .upload-box {
+            border: 2px dashed #d5c69e;
+            background: #fcfbf7;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .upload-box i {
+            font-size: 30px;
+            color: var(--verde);
+        }
+
+        .upload-box p {
+            font-size: 13px;
+            color: #77786f;
+            margin: 8px 0 15px;
+        }
+
+        .btn-beraka {
+            background: var(--verde);
+            color: white;
+            border: none;
+            border-radius: 9px;
+            padding: 12px 22px;
+            font-weight: bold;
+            transition: .2s;
+        }
+
+        .btn-beraka:hover {
+            background: var(--verde-oscuro);
+            color: white;
+        }
+
+        .btn-outline-beraka {
+            color: var(--verde);
+            border: 1px solid var(--verde);
+            border-radius: 9px;
+            padding: 12px 22px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-outline-beraka:hover {
+            background: var(--beige);
+            color: var(--verde);
+        }
+
+        .notice {
+            background: #f0f5ef;
+            border-left: 4px solid var(--verde);
+            padding: 14px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #425546;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #fff0cf;
+            color: #896621;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .footer-beraka {
+            background: var(--verde-oscuro);
+            color: #e9e3d6;
+            padding: 22px 15px;
+            text-align: center;
+            border-top: 3px solid var(--dorado);
+            font-size: 12px;
+        }
+
+        .footer-beraka strong {
+            color: #e0c47f;
+            letter-spacing: 2px;
+        }
+
+        @media (max-width: 768px) {
+            main {
+                padding-top: 25px;
+            }
+
+            .card-body-custom {
+                padding: 19px;
+            }
+
+            .navbar-beraka .nav-link {
+                padding-left: 0 !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-beraka">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'dashboard' %}">
+            BERAKÁ
+            <span class="brand-subtitle">HOTEL & RESTAURANTE</span>
+        </a>
+
+        <button class="navbar-toggler" type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#navbarBeraka"
+                aria-controls="navbarBeraka"
+                aria-expanded="false"
+                aria-label="Abrir menú">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarBeraka">
+            <ul class="navbar-nav ms-auto align-items-lg-center">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'dashboard' %}">
+                        <i class="bi bi-grid"></i> Inicio
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'registro_eventos' %}">
+                        <i class="bi bi-calendar-event"></i> Eventos
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'nueva_cotizacion' %}">
+                        <i class="bi bi-file-earmark-text"></i> Cotizaciones
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'cotizar_hospedaje' %}">
+                        <i class="bi bi-building"></i> Hospedaje
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link active" href="{% url 'formulario_pago' %}">
+                        <i class="bi bi-credit-card"></i> Pagos
+                    </a>
+                </li>
+
+                <li class="nav-item ms-lg-2">
+                    <a class="nav-link" href="{% url 'logout' %}">
+                        <i class="bi bi-box-arrow-right"></i> Salir
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- CONTENIDO -->
+<main>
+    <div class="container" style="max-width: 1050px;">
+
+        <div class="page-heading">
+            <div class="eyebrow">Administración financiera</div>
+            <h1>Registrar pago</h1>
+            <p>Gestiona anticipos, abonos y comprobantes de tus cotizaciones.</p>
+        </div>
+
+        <div class="notice mb-4">
+            <i class="bi bi-shield-check me-2"></i>
+            Los pagos registrados quedarán pendientes de validación hasta que el personal confirme la recepción del dinero.
+        </div>
+
+        <div id="mensaje" class="alert d-none" role="alert"></div>
+
+        <form id="formPago" method="POST"
+              action="{% url 'registrar_pago' %}"
+              enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="payment-card mb-4">
+                <div class="card-heading">
+                    <h2><i class="bi bi-file-earmark-check me-2"></i>Información de la cotización</h2>
+                </div>
+
+                <div class="card-body-custom">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label" for="categoria">Categoría</label>
+                            <select class="form-select" id="categoria">
+                                <option value="">Todas las categorías</option>
+                                <option value="Evento">Eventos</option>
+                                <option value="Hospedaje">Hospedaje</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label" for="cotizacion_id">Cotización aceptada *</label>
+                            <select class="form-select" id="cotizacion_id"
+                                    name="cotizacion_id" required>
+                                <option value="">Selecciona una cotización</option>
+
+                                {% for item in datos_cotizaciones %}
+                                    <option
+                                        value="{{ item.cotizacion.cotizacion_id }}"
+                                        data-categoria="{{ item.categoria }}"
+                                        data-total="{{ item.cotizacion.total }}">
+                                        {{ item.categoria }} —
+                                        {{ item.cotizacion.numero_cotizacion }} —
+                                        ${{ item.cotizacion.total }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Solo aparecen cotizaciones aceptadas.</small>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="summary-box">
+                                <div class="summary-label">Total de la cotización</div>
+                                <div class="summary-value" id="totalCotizacion">$0.00</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="summary-box">
+                                <div class="summary-label">Anticipo requerido (50 %)</div>
+                                <div class="summary-value deposit-value" id="anticipoRequerido">$0.00</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="summary-box">
+                                <div class="summary-label">Monto pendiente de registrar</div>
+                                <div class="summary-value" id="saldoCotizacion">$0.00</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="payment-card mb-4">
+                <div class="card-heading">
+                    <h2><i class="bi bi-wallet2 me-2"></i>Detalles del pago</h2>
+                </div>
+
+                <div class="card-body-custom">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label" for="tipo_pago">Tipo de pago *</label>
+                            <select class="form-select" name="tipo_pago" id="tipo_pago" required>
+                                <option value="Anticipo">Anticipo</option>
+                                <option value="Abono">Abono</option>
+                                <option value="Pago final">Pago final</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label" for="metodo_pago_id">Método de pago *</label>
+                            <select class="form-select" name="metodo_pago_id"
+                                    id="metodo_pago_id" required>
+                                <option value="">Selecciona un método</option>
+                                {% for metodo in metodos_pago %}
+                                    <option value="{{ metodo.metodo_pago_id }}">
+                                        {{ metodo.nombre }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label" for="monto">Monto recibido ($) *</label>
+                            <input type="number" class="form-control" id="monto"
+                                   name="monto" min="0.01" step="0.01"
+                                   placeholder="Ej. 400.00" required>
+                            <small class="text-muted" id="ayudaMonto">
+                                Selecciona una cotización para calcular el anticipo.
+                            </small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Estado del registro</label>
+                            <div class="pt-2">
+                                <span class="status-badge">
+                                    <i class="bi bi-clock-history me-1"></i>Pendiente de validación
+                                </span>
+                            </div>
+                            <small class="text-muted d-block mt-2">
+                                El estado lo controla el sistema.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="payment-card mb-4">
+                <div class="card-heading">
+                    <h2><i class="bi bi-paperclip me-2"></i>Constancia del pago</h2>
+                </div>
+
+                <div class="card-body-custom">
+                    <div class="upload-box">
+                        <i class="bi bi-cloud-arrow-up"></i>
+                        <p>Adjunta una fotografía, factura o comprobante bancario.</p>
+
+                        <input type="file" class="form-control"
+                               id="comprobante" name="comprobante"
+                               accept=".pdf,.jpg,.jpeg,.png"
+                               required>
+
+                        <small class="text-muted d-block mt-3">
+                            Formatos permitidos: PDF, JPG, JPEG y PNG. Máximo 5 MB.
+                        </small>
+                        <div id="nombreArchivo" class="small mt-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-end gap-3">
+                <a href="{% url 'dashboard' %}" class="btn-outline-beraka">
+                    <i class="bi bi-arrow-left me-1"></i> Volver
+                </a>
+
+                <button type="submit" class="btn-beraka" id="btnGuardar">
+                    <i class="bi bi-check2-circle me-2"></i>Registrar pago
+                </button>
+            </div>
+        </form>
+
+    </div>
+</main>
+
+<!-- FOOTER -->
+<footer class="footer-beraka">
+    <strong>BERAKÁ</strong>
+    <div class="mt-2">Hotel & Restaurante</div>
+    <div class="mt-2">Administración de cotizaciones y pagos</div>
+    <div class="mt-2">© {% now "Y" %} BERAKÁ. Todos los derechos reservados.</div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    const selector = document.getElementById("cotizacion_id");
+    const categoria = document.getElementById("categoria");
+    const monto = document.getElementById("monto");
+    const form = document.getElementById("formPago");
+    const mensaje = document.getElementById("mensaje");
+
+    function dinero(valor) {
+        return new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD"
+        }).format(valor || 0);
+    }
+
+    function actualizarResumen() {
+        const opcion = selector.options[selector.selectedIndex];
+        const total = Number(opcion?.dataset.total || 0);
+        const anticipo = total * 0.5;
+
+        document.getElementById("totalCotizacion").textContent = dinero(total);
+        document.getElementById("anticipoRequerido").textContent = dinero(anticipo);
+        document.getElementById("saldoCotizacion").textContent = dinero(total);
+
+        monto.max = total > 0 ? total.toFixed(2) : "";
+        document.getElementById("ayudaMonto").textContent =
+            total > 0
+                ? "Anticipo inicial sugerido: " + dinero(anticipo)
+                : "Selecciona una cotización para calcular el anticipo.";
+    }
+
+    function filtrarCategorias() {
+        const valor = categoria.value;
+
+        Array.from(selector.options).forEach((opcion, indice) => {
+            if (indice === 0) {
+                opcion.hidden = false;
+                return;
+            }
+
+            opcion.hidden = valor !== "" && opcion.dataset.categoria !== valor;
+        });
+
+        if (selector.selectedOptions[0]?.hidden) {
+            selector.value = "";
+        }
+
+        actualizarResumen();
+    }
+
+    categoria.addEventListener("change", filtrarCategorias);
+    selector.addEventListener("change", actualizarResumen);
+
+    document.getElementById("comprobante").addEventListener("change", function () {
+        const archivo = this.files[0];
+        document.getElementById("nombreArchivo").textContent =
+            archivo ? "Archivo seleccionado: " + archivo.name : "";
+    });
+
+    form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        mensaje.className = "alert d-none";
+        const boton = document.getElementById("btnGuardar");
+
+        if (!form.reportValidity()) return;
+
+        const archivo = document.getElementById("comprobante").files[0];
+
+        if (archivo && archivo.size > 5 * 1024 * 1024) {
+            mensaje.className = "alert alert-danger";
+            mensaje.textContent = "El archivo no puede superar los 5 MB.";
+            return;
+        }
+
+        boton.disabled = true;
+        boton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Registrando...';
+
+        try {
+            const respuesta = await fetch(form.action, {
+                method: "POST",
+                body: new FormData(form),
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            });
+
+            const datos = await respuesta.json();
+
+            mensaje.className = "alert " + (datos.ok ? "alert-success" : "alert-danger");
+            mensaje.textContent = datos.mensaje || datos.error || "No se pudo procesar el pago.";
+
+            if (datos.ok) {
+                form.reset();
+                actualizarResumen();
+                document.getElementById("nombreArchivo").textContent = "";
+                mensaje.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+        } catch (error) {
+            mensaje.className = "alert alert-danger";
+            mensaje.textContent = "No se pudo conectar con el servidor. Intenta nuevamente.";
+        } finally {
+            boton.disabled = false;
+            boton.innerHTML = '<i class="bi bi-check2-circle me-2"></i>Registrar pago';
+        }
+    });
+
+    actualizarResumen();
+</script>
+
+</body>
+</html>

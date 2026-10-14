@@ -11,6 +11,12 @@ urlpatterns = [
         admin.site.urls
     ),
 
+
+    path("login/", views.login_view, name="login"),
+
+
+
+
     path(
         "",
         include("eventos.urls")
@@ -23,17 +29,31 @@ urlpatterns = [
 ),
 
 
-path(
-    "hospedaje/cotizar/",
-    views.cotizar_hospedaje,
-    name="cotizar_hospedaje"
-),
+    path(
+        "hospedaje/cotizar/",
+        views.cotizar_hospedaje,
+        name="cotizar_hospedaje"
+    ),
 
 
-path(
-    "hospedaje/guardar/",
-    views.guardar_cotizacion_hospedaje,
-    name="guardar_cotizacion_hospedaje",
-),
+    path(
+        "hospedaje/guardar/",
+        views.guardar_cotizacion_hospedaje,
+        name="guardar_cotizacion_hospedaje",
+    ),
+
+    path(
+        "pagos/registrar/",
+        views.registrar_pago,
+        name="registrar_pago",
+    ),
+
+
+    path(
+        "pagos/nuevo/",
+        views.formulario_pago,
+        name="formulario_pago",
+    ),
+
 
 ]

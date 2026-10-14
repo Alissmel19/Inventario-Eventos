@@ -470,19 +470,56 @@ class MontajesEvento(models.Model):
 
 class Pagos(models.Model):
     pago_id = models.AutoField(primary_key=True)
-    evento = models.ForeignKey(Eventos, models.DO_NOTHING)
-    metodo_pago = models.ForeignKey(MetodosPago, models.DO_NOTHING)
+
+    # Relaciones existentes
+  
+    evento = models.ForeignKey(
+        Eventos,
+        models.DO_NOTHING,
+        db_column='evento_id',
+        blank=True,
+        null=True
+    )
+
+
+    metodo_pago = models.ForeignKey(
+        MetodosPago,
+        models.DO_NOTHING,
+        db_column='metodo_pago_id'
+    )
+
+    # Nueva relación con la cotización
+    cotizacion = models.ForeignKey(
+        'Cotizaciones',
+        models.DO_NOTHING,
+        db_column='cotizacion_id',
+        blank=True,
+        null=True
+    )
+
+    # Información del pago
     fecha_pago = models.DateField()
     monto = models.DecimalField(max_digits=12, decimal_places=2)
     tipo_pago = models.CharField(max_length=50, blank=True, null=True)
     numero_referencia = models.CharField(max_length=100, blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
+
+    # Nuevos campos
+    estado_pago = models.CharField(
+        max_length=30,
+        default='Pendiente'
+    )
+
+    comprobante_url = models.TextField(
+        blank=True,
+        null=True
+    )
+
     fecha_registro = models.DateTimeField()
 
     class Meta:
         managed = False
         db_table = 'pagos'
-
 
 class PaquetesEvento(models.Model):
     id_paquete = models.AutoField(primary_key=True)

@@ -23,6 +23,12 @@ from django.contrib.auth.decorators import login_required
 
 from .models import HabitacionesUnidades, DetalleHospedaje
 
+
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.core.exceptions import ValidationError
+
+
 from .models import (
 
     Clientes,
@@ -52,9 +58,12 @@ from .models import (
     Bebidas,
 
     ServiciosOpcionales,
-     Hospedaje,
+    Hospedaje,
     HabitacionesUnidades,
     DetalleHospedaje,
+    MetodosPago,
+
+    
 
 )
 
@@ -1623,3 +1632,208 @@ def guardar_cotizacion_hospedaje(request):
             "error": str(error),
         }, status=500)
 
+
+
+@login_required(login_url="/login/")
+def formulario_pago(request):
+    cotizaciones = (
+        Cotizaciones.objects
+        .filter(estado="Aceptada")
+        .select_related("evento")
+        .order_by("-fecha")
+    )
+
+    metodos_pago = MetodosPago.objects.filter(
+        estado=True
+    ).order_by("nombre")
+
+    datos_cotizaciones = []
+
+    for cotizacion in cotizaciones:
+        es_hospedaje = Hospedaje.objects.filter(
+            cotizacion_id=cotizacion.cotizacion_id
+        ).exists()
+
+        categoria = "Hospedaje" if es_hospedaje else "Evento"
+
+        datos_cotizaciones.append({
+            "cotizacion": cotizacion,
+            "categoria": categoria,
+        })
+
+    return render(
+        request,
+        "registrar_pago.html",
+        {
+            "datos_cotizaciones": datos_cotizaciones,
+            "metodos_pago": metodos_pago,
+        }
+    )
+
+
+
+
+
+@login_required(login_url="/login/")
+@require_POST
+def registrar_pago(request):
+    ruta = None
+
+    try:
+        cotizacion_id = request.POST.get("cotizacion_id", "").strip()
+        metodo_pago_id = request.POST.get("metodo_pago_id", "").strip()
+        tipo_pago = request.POST.get("tipo_pago", "Anticipo").strip()
+        comprobante = request.FILES.get("comprobante")
+
+        try:
+            monto = Decimal(request.POST.get("monto", "0"))
+        except (InvalidOperation, ValueError):
+            return JsonResponse({
+                "ok": False,
+                "error": "El monto ingresado no es válido."
+            }, status=400)
+
+        if not cotizacion_id or not metodo_pago_id:
+            return JsonResponse({
+                "ok": False,
+                "error": "Selecciona una cotización y un método de pago."
+            }, status=400)
+
+        if not monto.is_finite() or monto <= 0:
+            return JsonResponse({
+                "ok": False,
+                "error": "El monto debe ser mayor que cero."
+            }, status=400)
+
+        if tipo_pago not in ("Anticipo", "Abono", "Pago final"):
+            return JsonResponse({
+                "ok": False,
+                "error": "El tipo de pago no es válido."
+            }, status=400)
+
+        if not comprobante:
+            return JsonResponse({
+                "ok": False,
+                "error": "Adjunta el comprobante del pago."
+            }, status=400)
+
+        nombre = comprobante.name.lower()
+        extensiones_permitidas = (".pdf", ".jpg", ".jpeg", ".png")
+
+        if not nombre.endswith(extensiones_permitidas):
+            return JsonResponse({
+                "ok": False,
+                "error": "Solo se permiten archivos PDF, JPG, JPEG o PNG."
+            }, status=400)
+
+        if comprobante.size <= 0 or comprobante.size > 5 * 1024 * 1024:
+            return JsonResponse({
+                "ok": False,
+                "error": "El archivo debe pesar entre 1 byte y 5 MB."
+            }, status=400)
+
+        # Verificar firmas básicas del contenido del archivo.
+        inicio = comprobante.read(8)
+        comprobante.seek(0)
+
+        es_pdf = inicio.startswith(b"%PDF-")
+        es_jpeg = inicio.startswith(b"\xff\xd8\xff")
+        es_png = inicio.startswith(b"\x89PNG\r\n\x1a\n")
+
+        if not (es_pdf or es_jpeg or es_png):
+            return JsonResponse({
+                "ok": False,
+                "error": "El contenido del archivo no corresponde a un PDF o imagen admitida."
+            }, status=400)
+
+        with transaction.atomic():
+            cotizacion = Cotizaciones.objects.select_for_update().get(
+                cotizacion_id=cotizacion_id
+            )
+
+            if cotizacion.estado != "Aceptada":
+                return JsonResponse({
+                    "ok": False,
+                    "error": "La cotización debe estar aceptada antes de registrar el pago."
+                }, status=400)
+
+            metodo_pago = MetodosPago.objects.get(
+                metodo_pago_id=metodo_pago_id,
+                estado=True
+            )
+
+            anticipo_requerido = (
+                cotizacion.total * Decimal("0.50")
+            ).quantize(Decimal("0.01"))
+
+            # Los pagos pendientes también se consideran para evitar
+            # registrar varias solicitudes que excedan el total.
+            pagos_existentes = Pagos.objects.filter(
+                cotizacion=cotizacion
+            ).exclude(estado_pago="Rechazado")
+
+            total_registrado = sum(
+                (p.monto for p in pagos_existentes),
+                Decimal("0.00")
+            )
+
+            if total_registrado + monto > cotizacion.total:
+                return JsonResponse({
+                    "ok": False,
+                    "error": "El pago supera el saldo disponible de la cotización."
+                }, status=400)
+
+            evento = cotizacion.evento
+
+            # Se conserva evento_id cuando la cotización corresponde
+            # a un evento; en hospedaje puede ser nulo.
+            ruta = default_storage.save(
+                f"comprobantes/{uuid.uuid4().hex}{nombre[-5:] if nombre.endswith('.jpeg') else nombre[-4:]}",
+                ContentFile(comprobante.read())
+            )
+
+            Pagos.objects.create(
+                evento=evento,
+                cotizacion=cotizacion,
+                metodo_pago=metodo_pago,
+                fecha_pago=timezone.localdate(),
+                monto=monto,
+                tipo_pago=tipo_pago,
+                estado_pago="Pendiente",
+                comprobante_url=ruta,
+                fecha_registro=timezone.now(),
+                observaciones="Pendiente de validación del personal."
+            )
+
+        return JsonResponse({
+            "ok": True,
+            "mensaje": "Pago registrado correctamente. Está pendiente de validación.",
+            "anticipo_requerido": str(anticipo_requerido),
+            "pendiente_validacion": True
+        })
+
+    except (
+        Cotizaciones.DoesNotExist,
+        MetodosPago.DoesNotExist,
+        ValueError,
+        InvalidOperation,
+    ):
+        if ruta:
+            default_storage.delete(ruta)
+
+        return JsonResponse({
+            "ok": False,
+            "error": "La cotización, el método de pago o los datos proporcionados no son válidos."
+        }, status=400)
+
+    except Exception:
+        if ruta:
+            default_storage.delete(ruta)
+
+        import logging
+        logging.exception("Error al registrar el pago")
+
+        return JsonResponse({
+            "ok": False,
+            "error": "Ocurrió un error al registrar el pago. Revisa los registros del servidor."
+        }, status=500)
