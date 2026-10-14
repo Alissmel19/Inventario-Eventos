@@ -54,6 +54,23 @@ urlpatterns = [
         views.formulario_pago,
         name="formulario_pago",
     ),
+    
+    path(
+        "cotizaciones/",
+        views.lista_cotizaciones,
+        name="lista_cotizaciones",
+    ),
+    path(
+        "cotizaciones/<int:cotizacion_id>/estado/",
+        views.actualizar_estado_cotizacion,
+        name="actualizar_estado_cotizacion",
+    ),
+    path(
+    "cotizaciones/<int:cotizacion_id>/detalle/",
+    views.detalle_cotizacion,
+    name="detalle_cotizacion",
+    ),
+
 
 
 ]

@@ -6,7 +6,8 @@ from decimal import Decimal, InvalidOperation
 
 from decimal import Decimal, InvalidOperation
 
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+
 
 from django.http import JsonResponse
 
@@ -119,7 +120,7 @@ def login_view(request):
 
 # ============================================================
 
-# DASHBOARD GENERAL
+# DASHBOARD GENERAL DaSGOEN 
 
 # ============================================================
 
@@ -1837,3 +1838,159 @@ def registrar_pago(request):
             "ok": False,
             "error": "Ocurrió un error al registrar el pago. Revisa los registros del servidor."
         }, status=500)
+
+
+
+@login_required(login_url="/login/")
+def lista_cotizaciones(request):
+    cotizaciones = Cotizaciones.objects.all().order_by("-fecha_creacion")
+
+    categoria = request.GET.get("categoria", "")
+    estado = request.GET.get("estado", "")
+    buscar = request.GET.get("buscar", "").strip()
+
+    if estado in (
+        "Borrador", "Enviada", "Aceptada",
+        "Rechazada", "Vencida", "Cancelada"
+    ):
+        cotizaciones = cotizaciones.filter(estado=estado)
+
+    datos = []
+
+    for cotizacion in cotizaciones:
+        hospedaje = Hospedaje.objects.filter(
+            cotizacion_id=cotizacion.cotizacion_id
+        ).select_related("cliente").first()
+
+        tipo = "Hospedaje" if hospedaje else "Evento"
+
+        if categoria and categoria != tipo:
+            continue
+
+        if hospedaje:
+            cliente_nombre = (
+                hospedaje.cliente.nombre
+                if hospedaje.cliente else "Sin cliente"
+            )
+        else:
+            cliente_nombre = (
+                f"Evento #{cotizacion.evento_id}"
+                if cotizacion.evento_id else "Sin cliente asociado"
+            )
+
+        if buscar and (
+            buscar.lower() not in cotizacion.numero_cotizacion.lower()
+            and buscar.lower() not in cliente_nombre.lower()
+        ):
+            continue
+
+        datos.append({
+            "cotizacion": cotizacion,
+            "categoria": tipo,
+            "cliente_nombre": cliente_nombre,
+        })
+
+    return render(
+        request,
+        "cotizaciones.html",
+        {
+            "datos": datos,
+            "categoria_seleccionada": categoria,
+            "estado_seleccionado": estado,
+            "busqueda": buscar,
+            "estados": [
+                "Borrador", "Enviada", "Aceptada",
+                "Rechazada", "Vencida", "Cancelada"
+            ],
+        }
+    )
+
+
+@login_required(login_url="/login/")
+@require_POST
+def actualizar_estado_cotizacion(request, cotizacion_id):
+    estado_nuevo = request.POST.get("estado", "").strip()
+
+    estados_permitidos = {
+        "Borrador", "Enviada", "Aceptada",
+        "Rechazada", "Vencida", "Cancelada"
+    }
+
+    if estado_nuevo not in estados_permitidos:
+        return JsonResponse({
+            "ok": False,
+            "error": "El estado seleccionado no es válido."
+        }, status=400)
+
+    cotizacion = get_object_or_404(
+        Cotizaciones,
+        cotizacion_id=cotizacion_id
+    )
+
+    cotizacion.estado = estado_nuevo
+    cotizacion.save(update_fields=["estado"])
+
+    return redirect("lista_cotizaciones")
+
+
+@login_required(login_url="/login/")
+def detalle_cotizacion(request, cotizacion_id):
+    cotizacion = get_object_or_404(
+        Cotizaciones,
+        cotizacion_id=cotizacion_id
+    )
+
+    hospedaje = Hospedaje.objects.filter(
+        cotizacion_id=cotizacion.cotizacion_id
+    ).select_related("cliente").first()
+
+    evento = cotizacion.evento if cotizacion.evento_id else None
+
+    detalles = DetalleCotizacion.objects.filter(
+        cotizacion=cotizacion
+    )
+
+    habitaciones = []
+
+    if hospedaje:
+        habitaciones = DetalleHospedaje.objects.filter(
+            id_hospedaje=hospedaje
+        ).select_related(
+            "id_habitaciones",
+            "id_unidad"
+        )
+
+    pagos = Pagos.objects.filter(
+        cotizacion=cotizacion
+    ).select_related("metodo_pago").order_by("-fecha_pago")
+
+    total_pagado = sum(
+        (pago.monto for pago in pagos
+         if pago.estado_pago != "Rechazado"),
+        Decimal("0.00")
+    )
+
+    saldo_pendiente = max(
+        cotizacion.total - total_pagado,
+        Decimal("0.00")
+    )
+
+    return render(
+        request,
+        "detalle_cotizacion.html",
+        {
+            "cotizacion": cotizacion,
+            "hospedaje": hospedaje,
+            "evento": evento,
+            "detalles": detalles,
+            "habitaciones": habitaciones,
+            "pagos": pagos,
+            "total_pagado": total_pagado,
+            "saldo_pendiente": saldo_pendiente,
+            "cliente": (
+                hospedaje.cliente
+                if hospedaje
+                else evento.cliente if evento else None
+            ),
+        }
+    )
