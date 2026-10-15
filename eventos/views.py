@@ -848,6 +848,23 @@ def nueva_cotizacion(request):
                     nombre__iexact="Pendiente"
                 )
 
+                # Validar que no exista otro evento en la misma fecha y lugar.
+                evento_existente = Eventos.objects.filter(
+                    fecha_evento=fecha_evento,
+                    area=area,
+                ).exclude(
+                    estado__nombre__iexact="Cancelado"
+                ).exists()
+
+                if evento_existente:
+                    return JsonResponse({
+                        "ok": False,
+                        "error": (
+                            "Ya existe un evento reservado en este lugar "
+                            "para la fecha seleccionada. Elige otra fecha o lugar."
+                        )
+                    }, status=400)
+
                 evento = Eventos.objects.create(
 
                     cliente=cliente,
@@ -1398,7 +1415,7 @@ def registro_eventos(request):
 
         request,
 
-        "EventosHome.html",
+        "cotizacionNueva.html",
 
         context
 
@@ -1867,16 +1884,21 @@ def lista_cotizaciones(request):
         if categoria and categoria != tipo:
             continue
 
+        
         if hospedaje:
             cliente_nombre = (
                 hospedaje.cliente.nombre
                 if hospedaje.cliente else "Sin cliente"
             )
         else:
+            evento = cotizacion.evento if cotizacion.evento_id else None
+
             cliente_nombre = (
-                f"Evento #{cotizacion.evento_id}"
-                if cotizacion.evento_id else "Sin cliente asociado"
+                evento.cliente.nombre
+                if evento and evento.cliente
+                else "Sin cliente asociado"
             )
+
 
         if buscar and (
             buscar.lower() not in cotizacion.numero_cotizacion.lower()
@@ -1965,9 +1987,12 @@ def detalle_cotizacion(request, cotizacion_id):
     ).select_related("metodo_pago").order_by("-fecha_pago")
 
     total_pagado = sum(
-        (pago.monto for pago in pagos
-         if pago.estado_pago != "Rechazado"),
-        Decimal("0.00")
+    (
+        pago.monto
+        for pago in pagos
+        if pago.estado_pago == "Aprobado"
+    ),
+    Decimal("0.00")
     )
 
     saldo_pendiente = max(
@@ -1994,3 +2019,122 @@ def detalle_cotizacion(request, cotizacion_id):
             ),
         }
     )
+
+
+
+
+@login_required(login_url="/login/")
+def pagos_cotizacion_json(request, cotizacion_id):
+    if not request.user.has_perm("eventos.validar_pagos"):
+        return JsonResponse(
+            {"ok": False, "error": "No tienes permiso para validar pagos."},
+            status=403
+        )
+
+    try:
+        cotizacion = Cotizaciones.objects.get(
+            cotizacion_id=cotizacion_id
+        )
+
+        pagos = Pagos.objects.filter(
+            cotizacion=cotizacion
+        ).select_related("metodo_pago").order_by("-fecha_registro")
+
+        datos_pagos = []
+
+        for pago in pagos:
+            datos_pagos.append({
+                "pago_id": pago.pago_id,
+                "monto": str(pago.monto),
+                "fecha_pago": pago.fecha_pago.strftime("%d/%m/%Y"),
+                "metodo_pago": (
+                    pago.metodo_pago.nombre
+                    if pago.metodo_pago else "No especificado"
+                ),
+                "tipo_pago": pago.tipo_pago or "No especificado",
+                "estado_pago": pago.estado_pago or "Pendiente",
+                "observaciones": pago.observaciones or "",
+                "comprobante_url": (
+                    request.build_absolute_uri(
+                        default_storage.url(pago.comprobante_url)
+                    )
+                    if pago.comprobante_url else None
+                ),
+            })
+
+        return JsonResponse({
+            "ok": True,
+            "cotizacion": cotizacion.numero_cotizacion,
+            "pagos": datos_pagos,
+        })
+
+    except Cotizaciones.DoesNotExist:
+        return JsonResponse(
+            {"ok": False, "error": "La cotización no existe."},
+            status=404
+        )
+
+@login_required(login_url="/login/")
+@require_POST
+def validar_pago(request, pago_id):
+    if not request.user.has_perm("eventos.validar_pagos"):
+        return JsonResponse({
+            "ok": False,
+            "error": "No tienes permiso para validar pagos."
+        }, status=403)
+
+    decision = request.POST.get("decision", "").strip()
+    observacion = request.POST.get("observacion", "").strip()
+
+    if decision not in ("Aprobado", "Rechazado"):
+        return JsonResponse({
+            "ok": False,
+            "error": "La decisión no es válida."
+        }, status=400)
+
+    if decision == "Rechazado" and not observacion:
+        return JsonResponse({
+            "ok": False,
+            "error": "Debes indicar el motivo del rechazo."
+        }, status=400)
+
+    try:
+        with transaction.atomic():
+            pago = Pagos.objects.select_for_update().get(
+                pago_id=pago_id
+            )
+
+            if pago.estado_pago != "Pendiente":
+                return JsonResponse({
+                    "ok": False,
+                    "error": "Este pago ya fue validado o no está pendiente."
+                }, status=400)
+
+            pago.estado_pago = decision
+            pago.observaciones = (
+                observacion
+                if decision == "Rechazado"
+                else "Pago aprobado por el personal."
+            )
+            pago.save(update_fields=[
+                "estado_pago",
+                "observaciones"
+            ])
+
+        return JsonResponse({
+            "ok": True,
+            "mensaje": (
+                "Pago aprobado correctamente."
+                if decision == "Aprobado"
+                else "Pago rechazado correctamente."
+            ),
+            "estado_pago": decision
+        })
+
+    except Pagos.DoesNotExist:
+        return JsonResponse({
+            "ok": False,
+            "error": "No se encontró el pago."
+        }, status=404)
+
+    

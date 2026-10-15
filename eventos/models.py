@@ -520,6 +520,9 @@ class Pagos(models.Model):
     class Meta:
         managed = False
         db_table = 'pagos'
+        permissions = [
+            ('validar_pagos', 'Puede aprobar o rechazar pagos'),
+        ]
 
 class PaquetesEvento(models.Model):
     id_paquete = models.AutoField(primary_key=True)

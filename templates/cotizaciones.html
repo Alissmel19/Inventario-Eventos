@@ -3,283 +3,923 @@
 {% block title %}Cotizaciones | BERAKÁ{% endblock %}
 
 {% block extra_css %}
+
 <style>
+
     :root {
+
         --borde: #e6e0d4;
+
     }
 
     main {
+
         padding: 38px 0 55px;
+
     }
 
     .titulo {
+
         color: var(--verde);
+
         font-family: Georgia, serif;
+
         font-weight: bold;
+
     }
 
     .panel {
+
         background: white;
+
         border: 1px solid var(--borde);
+
         border-radius: 15px;
+
         box-shadow: 0 8px 28px rgba(36, 52, 40, .05);
+
         overflow: hidden;
+
     }
 
     .panel-heading {
+
         background: var(--beige);
+
         border-bottom: 1px solid var(--borde);
+
         padding: 19px 23px;
+
         color: var(--verde);
+
         font-weight: bold;
+
     }
 
     .filters {
+
         padding: 22px;
+
     }
 
     .form-control, .form-select {
+
         border-color: #ded9ce;
+
         border-radius: 8px;
+
         font-size: 13px;
+
         padding: 10px 12px;
+
     }
 
     .btn-beraka {
+
         display: inline-block;
+
         background: var(--verde);
+
         color: white;
+
         border: none;
+
         border-radius: 8px;
+
         padding: 10px 17px;
+
         text-decoration: none;
+
         text-align: center;
+
     }
 
     .btn-beraka:hover {
+
         background: var(--verde-oscuro);
+
         color: white;
+
     }
 
     .btn-outline-beraka {
+
         border: 1px solid var(--verde);
+
         color: var(--verde);
+
         border-radius: 8px;
+
         padding: 9px 14px;
+
         text-decoration: none;
+
     }
 
     .table {
+
         margin-bottom: 0;
+
         font-size: 13px;
+
         vertical-align: middle;
+
     }
 
     .table thead th {
+
         background: #faf8f2;
+
         color: #5e6259;
+
         font-size: 11px;
+
         text-transform: uppercase;
+
         letter-spacing: .5px;
+
         padding: 15px 12px;
+
         white-space: nowrap;
+
     }
 
     .table tbody td {
+
         padding: 15px 12px;
+
     }
 
     .numero {
+
         color: var(--verde);
+
         font-weight: bold;
+
     }
 
     .categoria {
+
         display: inline-block;
+
         background: var(--beige);
+
         color: #725a2c;
+
         padding: 6px 9px;
+
         border-radius: 20px;
+
         font-size: 11px;
+
         font-weight: bold;
+
     }
 
     .estado {
+
         display: inline-block;
+
         border-radius: 20px;
+
         padding: 6px 9px;
+
         font-size: 11px;
+
         font-weight: bold;
+
         background: #eeeeeb;
+
         color: #555;
+
     }
 
     .estado-Enviada { background: #dceafa; color: #24588b; }
+
     .estado-Aceptada { background: #dff2e5; color: #21683b; }
+
     .estado-Rechazada, .estado-Cancelada { background: #f9e1df; color: #9b302b; }
+
     .estado-Vencida { background: #f8ebcc; color: #87651f; }
 
     .form-estado {
+
         display: flex;
+
         gap: 6px;
+
         min-width: 210px;
+
     }
 
     .form-estado select {
+
         min-width: 115px;
+
         padding: 7px;
+
         font-size: 12px;
+
     }
 
     .btn-guardar {
+
         background: var(--verde);
+
         color: white;
+
         border: none;
+
         border-radius: 7px;
+
         padding: 7px 10px;
+
     }
 
     .empty {
+
         padding: 45px 15px;
+
         text-align: center;
+
         color: #777;
+
     }
 
     @media (max-width: 768px) {
+
         main { padding: 25px 12px; }
+
         .filters { padding: 15px; }
+
+    }
+
+    .link-cotizacion {
+
+    color: #173b2d;
+
+    font-weight: 700;
+
+    text-decoration: none;
+
+    }
+
+    .link-cotizacion:hover {
+
+        color: #b08d43;
+
+        text-decoration: underline;
+
+    }
+
+
+    #cotizaciones-page { max-width: 1240px; margin: 0 auto; }
+    #cotizaciones-page .panel { margin-bottom: 24px; }
+    #cotizaciones-page .filters .row { align-items: end; }
+    #cotizaciones-page .filters button[type="submit"],
+    #cotizaciones-page .filters a[aria-label="Limpiar filtros"] {
+        min-width: 42px;
+        min-height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+    #cotizaciones-page .filters a[aria-label="Limpiar filtros"] {
+        padding: 10px 12px;
+        background: #fff;
+    }
+    #cotizaciones-page .table-responsive { width: 100%; }
+    #cotizaciones-page .table { min-width: 1050px; }
+    #cotizaciones-page .form-estado { align-items: center; }
+    #cotizaciones-page .form-estado .form-select { flex: 1; }
+    #cotizaciones-page .btn-guardar { cursor: pointer; white-space: nowrap; }
+    #cotizaciones-page .link-cotizacion:hover { text-decoration: underline; }
+    #modalPagos .modal-content { border: 1px solid var(--borde); }
+    #modalPagos .modal-body { min-height: 120px; }
+    @media (max-width: 768px) {
+        #cotizaciones-page { padding-left: 12px; padding-right: 12px; }
+        #cotizaciones-page .filters .col-lg-2 { width: 100%; }
+        #cotizaciones-page .form-estado { min-width: 190px; }
     }
 </style>
+
 {% endblock %}
 
 {% block content %}
-<div class="container">
+
+<div class="container" id="cotizaciones-page">
+
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+
         <div>
+
             <div class="text-uppercase small mb-2" style="color:#96783e;letter-spacing:2px">
+
                 Administración comercial
+
             </div>
+
             <h1 class="titulo mb-2">Cotizaciones</h1>
+
             <p class="text-secondary mb-0">
+
                 Consulta y administra las cotizaciones de eventos y hospedaje.
+
             </p>
+
         </div>
 
         <a href="{% url 'nueva_cotizacion' %}" class="btn-beraka">
+
             <i class="bi bi-plus-lg me-1"></i> Nueva cotización
+
         </a>
+
     </div>
 
     {% if messages %}
+
         {% for message in messages %}
+
             <div class="alert alert-info">{{ message }}</div>
+
         {% endfor %}
+
     {% endif %}
 
     <section class="panel">
+
         <div class="panel-heading">
+
             <i class="bi bi-list-ul me-2"></i>Listado de cotizaciones
+
         </div>
 
         <form method="get" class="filters">
+
             <div class="row g-3 align-items-end">
+
                 <div class="col-lg-4">
+
                     <label class="form-label">Buscar</label>
+
                     <input class="form-control" type="search" name="buscar"
+
                            value="{{ busqueda }}"
+
                            placeholder="Número de cotización o cliente">
+
                 </div>
 
                 <div class="col-lg-3">
+
                     <label class="form-label">Categoría</label>
+
                     <select class="form-select" name="categoria">
+
                         <option value="">Todas</option>
+
                         <option value="Evento" {% if categoria_seleccionada == "Evento" %}selected{% endif %}>Eventos</option>
+
                         <option value="Hospedaje" {% if categoria_seleccionada == "Hospedaje" %}selected{% endif %}>Hospedaje</option>
+
                     </select>
+
                 </div>
 
                 <div class="col-lg-3">
+
                     <label class="form-label">Estado</label>
+
                     <select class="form-select" name="estado">
+
                         <option value="">Todos los estados</option>
+
                         {% for e in estados %}
+
                             <option value="{{ e }}" {% if estado_seleccionado == e %}selected{% endif %}>
+
                                 {{ e }}
+
                             </option>
+
                         {% endfor %}
+
                     </select>
+
                 </div>
 
                 <div class="col-lg-2 d-flex gap-2">
+
                     <button class="btn-beraka flex-grow-1" type="submit" aria-label="Buscar">
+
                         <i class="bi bi-search"></i>
+
                     </button>
+
                     <a href="{% url 'lista_cotizaciones' %}" class="btn-outline-beraka" aria-label="Limpiar filtros">
+
                         <i class="bi bi-arrow-counterclockwise"></i>
+
                     </a>
+
                 </div>
+
             </div>
+
         </form>
 
         <div class="table-responsive">
+
             <table class="table table-hover">
+
                 <thead>
+
                     <tr>
+
                         <th>N.º cotización</th>
+
                         <th>Categoría</th>
+
                         <th>Cliente / referencia</th>
+
                         <th>Fecha</th>
+
                         <th>Total</th>
+
                         <th>Estado actual</th>
+
                         <th>Actualizar estado</th>
+
+                        <th>Pagos</th>
+
                     </tr>
+
                 </thead>
+
                 <tbody>
+
                     {% for item in datos %}
+
                         <tr>
-                            <td class="numero">{{ item.cotizacion.numero_cotizacion }}</td>
+
+                            <td class="numero">
+
+                                <a href="{% url 'detalle_cotizacion' item.cotizacion.cotizacion_id %}"
+
+                                class="link-cotizacion">
+
+                                    {{ item.cotizacion.numero_cotizacion }}
+
+                                </a>
+
+                            </td>
+
                             <td><span class="categoria">{{ item.categoria }}</span></td>
+
                             <td>{{ item.cliente_nombre }}</td>
+
                             <td>{{ item.cotizacion.fecha|date:"d/m/Y" }}</td>
+
                             <td class="fw-bold">${{ item.cotizacion.total|floatformat:2 }}</td>
+
                             <td>
+
                                 <span class="estado estado-{{ item.cotizacion.estado }}">
+
                                     {{ item.cotizacion.estado }}
+
                                 </span>
+
                             </td>
+
                             <td>
+
                                 <form method="post"
+
                                       action="{% url 'actualizar_estado_cotizacion' item.cotizacion.cotizacion_id %}"
+
                                       class="form-estado">
+
                                     {% csrf_token %}
+
                                     <select class="form-select" name="estado" required>
+
                                         {% for e in estados %}
+
                                             <option value="{{ e }}" {% if item.cotizacion.estado == e %}selected{% endif %}>
+
                                                 {{ e }}
+
                                             </option>
+
                                         {% endfor %}
+
                                     </select>
+
                                     <button class="btn-guardar" type="submit" title="Guardar estado">
+
                                         <i class="bi bi-check-lg"></i>
+
                                     </button>
+
                                 </form>
+
                             </td>
+
+                            <td>
+
+                                {% if perms.eventos.validar_pagos %}
+
+                                    <button
+
+                                        type="button"
+
+                                        class="btn-guardar"
+
+                                        data-bs-toggle="modal"
+
+                                        data-bs-target="#modalPagos"
+
+                                        data-cotizacion-id="{{ item.cotizacion.cotizacion_id }}"
+
+                                        data-cotizacion-numero="{{ item.cotizacion.numero_cotizacion }}"
+
+                                        onclick="cargarPagos(this)">
+
+                                        <i class="bi bi-cash-coin"></i> Revisar pagos
+
+                                    </button>
+
+                                {% else %}
+
+                                    <span class="text-muted">Sin permiso</span>
+
+                                {% endif %}
+
+                            </td>
+
                         </tr>
+
                     {% empty %}
+
                         <tr>
-                            <td colspan="7">
+
+                            <td colspan="8">
+
                                 <div class="empty">
+
                                     <i class="bi bi-folder2-open fs-1 d-block mb-3"></i>
+
                                     <strong>No se encontraron cotizaciones</strong>
+
                                     <p class="mb-0 mt-2">Prueba cambiando los filtros o crea una nueva cotización.</p>
+
                                 </div>
+
                             </td>
+
                         </tr>
+
                     {% endfor %}
+
                 </tbody>
+
             </table>
+
         </div>
+
     </section>
+
 </div>
+
+<div class="modal fade" id="modalPagos" tabindex="-1"
+
+     aria-labelledby="modalPagosLabel" aria-hidden="true">
+
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+
+        <div class="modal-content" style="border-radius:15px; overflow:hidden;">
+
+            <div class="modal-header"
+
+                 style="background:var(--beige); color:var(--verde);">
+
+                <div>
+
+                    <h5 class="modal-title fw-bold" id="modalPagosLabel">
+
+                        Validación de pagos
+
+                    </h5>
+
+                    <small id="numeroCotizacionModal"></small>
+
+                </div>
+
+                <button type="button" class="btn-close"
+
+                        data-bs-dismiss="modal" aria-label="Cerrar"></button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <form id="formValidarPago" class="d-none">
+
+                    {% csrf_token %}
+
+                </form>
+
+                <div id="mensajePagos" class="alert alert-info">
+
+                    Selecciona una cotización para consultar sus pagos.
+
+                </div>
+
+                <div id="contenidoPagos" class="table-responsive">
+
+                    <table class="table table-hover align-middle">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>Fecha</th>
+
+                                <th>Tipo</th>
+
+                                <th>Método</th>
+
+                                <th>Monto</th>
+
+                                <th>Estado</th>
+
+                                <th>Comprobante</th>
+
+                                <th>Acciones</th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="tablaPagosBody"></tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button type="button" class="btn-outline-beraka"
+
+                        data-bs-dismiss="modal">
+
+                    Cerrar
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+let botonCotizacionActual = null;
+
+async function cargarPagos(boton) {
+
+    botonCotizacionActual = boton;
+
+    const cotizacionId = boton.dataset.cotizacionId;
+
+    const numero = boton.dataset.cotizacionNumero;
+
+    const mensaje = document.getElementById("mensajePagos");
+
+    const cuerpo = document.getElementById("tablaPagosBody");
+
+    document.getElementById("numeroCotizacionModal").textContent =
+
+        "Cotización: " + numero;
+
+    cuerpo.replaceChildren();
+
+    mensaje.className = "alert alert-info";
+
+    mensaje.textContent = "Cargando pagos...";
+
+    try {
+
+        const respuesta = await fetch(`/pagos/cotizacion/${cotizacionId}/`, {
+
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+
+        });
+
+        const resultado = await respuesta.json();
+
+        if (!respuesta.ok || !resultado.ok) {
+
+            throw new Error(resultado.error || "No se pudieron consultar los pagos.");
+
+        }
+
+        if (!resultado.pagos.length) {
+
+            mensaje.className = "alert alert-secondary";
+
+            mensaje.textContent = "Esta cotización todavía no tiene pagos registrados.";
+
+            return;
+
+        }
+
+        mensaje.className = "alert alert-info";
+
+        mensaje.textContent = "Se encontraron " + resultado.pagos.length + " pago(s).";
+
+        resultado.pagos.forEach(pago => {
+
+            const fila = document.createElement("tr");
+
+            [pago.fecha_pago, pago.tipo_pago, pago.metodo_pago,
+
+             "$" + Number(pago.monto).toFixed(2), pago.estado_pago].forEach(valor => {
+
+                const celda = document.createElement("td");
+
+                celda.textContent = valor ?? "";
+
+                fila.appendChild(celda);
+
+            });
+
+            const celdaComprobante = document.createElement("td");
+
+            if (pago.comprobante_url) {
+
+                const enlace = document.createElement("a");
+
+                enlace.href = pago.comprobante_url;
+
+                enlace.target = "_blank";
+
+                enlace.rel = "noopener noreferrer";
+
+                enlace.textContent = "Ver comprobante";
+
+                enlace.className = "link-cotizacion";
+
+                celdaComprobante.appendChild(enlace);
+
+            } else {
+
+                celdaComprobante.textContent = "No adjunto";
+
+            }
+
+            fila.appendChild(celdaComprobante);
+
+            const celdaAcciones = document.createElement("td");
+
+            if (pago.estado_pago === "Pendiente") {
+
+                const aprobar = document.createElement("button");
+
+                aprobar.type = "button";
+
+                aprobar.className = "btn-guardar me-1 mb-1";
+
+                aprobar.textContent = "Aprobar";
+
+                aprobar.addEventListener("click", () =>
+
+                    procesarValidacion(pago.pago_id, "Aprobado"));
+
+                const rechazar = document.createElement("button");
+
+                rechazar.type = "button";
+
+                rechazar.className = "btn btn-outline-danger btn-sm mb-1";
+
+                rechazar.textContent = "Rechazar";
+
+                rechazar.addEventListener("click", () =>
+
+                    procesarValidacion(pago.pago_id, "Rechazado"));
+
+                celdaAcciones.append(aprobar, rechazar);
+
+            } else {
+
+                celdaAcciones.textContent = "Sin acciones";
+
+            }
+
+            fila.appendChild(celdaAcciones);
+
+            cuerpo.appendChild(fila);
+
+        });
+
+    } catch (error) {
+
+        mensaje.className = "alert alert-danger";
+
+        mensaje.textContent = error.message;
+
+    }
+
+}
+
+async function procesarValidacion(pagoId, decision) {
+
+    let observacion = "";
+
+    if (decision === "Rechazado") {
+
+        const respuestaObservacion = prompt("Indica el motivo por el que rechazas este pago:");
+
+        if (respuestaObservacion === null) return;
+
+        observacion = respuestaObservacion.trim();
+
+        if (!observacion) {
+
+            alert("Debes escribir el motivo del rechazo.");
+
+            return;
+
+        }
+
+    }
+
+    const csrfInput = document.querySelector(
+
+        '#formValidarPago input[name="csrfmiddlewaretoken"]');
+
+    if (!csrfInput) {
+
+        alert("No se encontró el token de seguridad. Recarga la página e inténtalo de nuevo.");
+
+        return;
+
+    }
+
+    const datos = new URLSearchParams({ decision, observacion });
+
+    try {
+
+        const respuesta = await fetch(`/pagos/${pagoId}/validar/`, {
+
+            method: "POST",
+
+            headers: {
+
+                "Content-Type": "application/x-www-form-urlencoded",
+
+                "X-CSRFToken": csrfInput.value,
+
+                "X-Requested-With": "XMLHttpRequest"
+
+            },
+
+            body: datos.toString()
+
+        });
+
+        const resultado = await respuesta.json();
+
+        if (!respuesta.ok || !resultado.ok) {
+
+            throw new Error(resultado.error || "No se pudo validar el pago.");
+
+        }
+
+        alert(resultado.mensaje);
+
+        if (botonCotizacionActual) {
+
+            await cargarPagos(botonCotizacionActual);
+
+        }
+
+    } catch (error) {
+
+        alert(error.message);
+
+    }
+
+}
+
+</script>
+
 {% endblock %}

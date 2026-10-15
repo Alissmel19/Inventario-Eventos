@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.urls import path, include
 from eventos import views
-
+from django.conf import settings
+from django.conf.urls.static import static
 
 
 urlpatterns = [
@@ -72,5 +73,25 @@ urlpatterns = [
     ),
 
 
+        
+    path(
+        "pagos/cotizacion/<int:cotizacion_id>/",
+        views.pagos_cotizacion_json,
+        name="pagos_cotizacion_json",
+    ),
+    
+    path(
+        "pagos/<int:pago_id>/validar/",
+        views.validar_pago,
+        name="validar_pago",
+    ),
+
+
+
 
 ]
+if settings.DEBUG:
+    urlpatterns += static(
+        settings.MEDIA_URL,
+        document_root=settings.MEDIA_ROOT
+    )

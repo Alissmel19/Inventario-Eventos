@@ -1,0 +1,511 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Detalle de cotización | BERAKÁ{% endblock %}
+
+{% block content %}
+<style>
+    .detalle-container {
+        max-width: 1200px;
+        margin: 35px auto;
+        padding: 0 20px 40px;
+        color: #344438;
+    }
+
+    .detalle-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .detalle-header h1 {
+        color: #294c36;
+        font-size: 30px;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .btn-volver {
+        display: inline-block;
+        padding: 10px 18px;
+        border-radius: 8px;
+        background: #294c36;
+        color: white;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .btn-volver:hover {
+        background: #1d3827;
+        color: white;
+    }
+
+    .detalle-card {
+        background: #fff;
+        border: 1px solid #e6dfd0;
+        border-radius: 14px;
+        padding: 24px;
+        margin-bottom: 22px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.05);
+    }
+
+    .detalle-card h2 {
+        color: #294c36;
+        font-size: 21px;
+        font-weight: 700;
+        border-bottom: 2px solid #c6a45c;
+        padding-bottom: 10px;
+        margin-bottom: 18px;
+    }
+
+    .detalle-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 18px;
+    }
+
+    .dato-label {
+        display: block;
+        color: #777;
+        font-size: 13px;
+        margin-bottom: 5px;
+    }
+
+    .dato-valor {
+        font-weight: 600;
+        overflow-wrap: anywhere;
+    }
+
+    .tabla-detalle {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .tabla-detalle th,
+    .tabla-detalle td {
+        padding: 12px;
+        border-bottom: 1px solid #eee8dc;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .tabla-detalle th {
+        background: #f4f0e7;
+        color: #294c36;
+        font-weight: 700;
+    }
+
+    .tabla-contenedor {
+        overflow-x: auto;
+    }
+
+    .estado {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        background: #f3ead5;
+        color: #725a20;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .resumen {
+        max-width: 430px;
+        margin-left: auto;
+    }
+
+    .resumen-fila {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee8dc;
+    }
+
+    .resumen-total {
+        font-size: 20px;
+        color: #294c36;
+        font-weight: 800;
+    }
+
+    .saldo {
+        color: #9b7222;
+        font-size: 19px;
+        font-weight: 800;
+    }
+
+    .sin-datos {
+        color: #777;
+        padding: 15px 0;
+    }
+
+    @media (max-width: 600px) {
+        .detalle-container {
+            padding: 0 12px 25px;
+        }
+
+        .detalle-card {
+            padding: 16px;
+        }
+
+        .detalle-header h1 {
+            font-size: 24px;
+        }
+    }
+</style>
+
+<div class="detalle-container">
+
+    <div class="detalle-header">
+        <div>
+            <h1>Detalle de cotización</h1>
+            <p class="text-muted mb-0">
+                Información completa de la cotización seleccionada.
+            </p>
+        </div>
+
+        <a href="{% url 'lista_cotizaciones' %}" class="btn-volver">
+            ← Volver a cotizaciones
+        </a>
+    </div>
+
+    <!-- INFORMACIÓN GENERAL -->
+    <section class="detalle-card">
+        <h2>Información general</h2>
+
+        <div class="detalle-grid">
+            <div>
+                <span class="dato-label">Número de cotización</span>
+                <span class="dato-valor">
+                    {{ cotizacion.numero_cotizacion|default:"Sin número" }}
+                </span>
+            </div>
+
+            <div>
+                <span class="dato-label">Tipo de servicio</span>
+                <span class="dato-valor">
+                    {% if hospedaje %}
+                        Hospedaje
+                    {% elif evento %}
+                        Evento
+                    {% else %}
+                        Cotización general
+                    {% endif %}
+                </span>
+            </div>
+
+            <div>
+                <span class="dato-label">Fecha de cotización</span>
+                <span class="dato-valor">
+                    {{ cotizacion.fecha|date:"d/m/Y"|default:"No registrada" }}
+                </span>
+            </div>
+
+            <div>
+                <span class="dato-label">Estado</span>
+                <span class="estado">
+                    {{ cotizacion.estado|default:"Sin estado" }}
+                </span>
+            </div>
+        </div>
+
+        {% if cotizacion.observaciones %}
+            <div class="mt-4">
+                <span class="dato-label">Observaciones</span>
+                <p class="mb-0">{{ cotizacion.observaciones }}</p>
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- INFORMACIÓN DEL CLIENTE -->
+    <section class="detalle-card">
+        <h2>Información del cliente</h2>
+
+        {% if cliente %}
+            <div class="detalle-grid">
+                <div>
+                    <span class="dato-label">Nombre</span>
+                    <span class="dato-valor">
+                        {{ cliente.nombre|default:"No registrado" }}
+                    </span>
+                </div>
+
+                <div>
+                    <span class="dato-label">Teléfono</span>
+                    <span class="dato-valor">
+                        {{ cliente.telefono|default:"No registrado" }}
+                    </span>
+                </div>
+
+                <div>
+                    <span class="dato-label">Correo electrónico</span>
+                    <span class="dato-valor">
+                        {{ cliente.correo|default:"No registrado" }}
+                    </span>
+                </div>
+
+                <div>
+                    <span class="dato-label">Dirección</span>
+                    <span class="dato-valor">
+                        {{ cliente.direccion|default:"No registrada" }}
+                    </span>
+                </div>
+            </div>
+        {% else %}
+            <p class="sin-datos">
+                Esta cotización no tiene un cliente asociado.
+            </p>
+        {% endif %}
+    </section>
+
+    <!-- INFORMACIÓN DEL EVENTO -->
+    {% if evento %}
+        <section class="detalle-card">
+            <h2>Información del evento</h2>
+
+            <div class="detalle-grid">
+                <div>
+                    <span class="dato-label">Fecha del evento</span>
+                    <span class="dato-valor">
+                        {{ evento.fecha_evento|date:"d/m/Y"|default:"No registrada" }}
+                    </span>
+                </div>
+
+                <div>
+                    <span class="dato-label">Hora de inicio</span>
+                    <span class="dato-valor">
+                        {{ evento.hora_inicio|default:"No registrada" }}
+                    </span>
+                </div>
+
+                <div>
+                    <span class="dato-label">Hora de finalización</span>
+                    <span class="dato-valor">
+                        {{ evento.hora_fin|default:"No registrada" }}
+                    </span>
+                </div>
+
+                <div>
+                    <span class="dato-label">Adultos</span>
+                    <span class="dato-valor">
+                        {{ evento.cantidad_adultos|default:"0" }}
+                    </span>
+                </div>
+
+                <div>
+                    <span class="dato-label">Niños</span>
+                    <span class="dato-valor">
+                        {{ evento.cantidad_ninos|default:"0" }}
+                    </span>
+                </div>
+
+                <div>
+                    <span class="dato-label">Total de invitados</span>
+                    <span class="dato-valor">
+                        {{ evento.total_invitados|default:"0" }}
+                    </span>
+                </div>
+            </div>
+
+            {% if evento.observaciones %}
+                <div class="mt-4">
+                    <span class="dato-label">Observaciones del evento</span>
+                    <p class="mb-0">{{ evento.observaciones }}</p>
+                </div>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    <!-- INFORMACIÓN DEL HOSPEDAJE -->
+    {% if hospedaje %}
+        <section class="detalle-card">
+            <h2>Información del hospedaje</h2>
+
+            <div class="detalle-grid">
+                <div>
+                    <span class="dato-label">Fecha del registro</span>
+                    <span class="dato-valor">
+                        {{ hospedaje.fecha|date:"d/m/Y"|default:"No registrada" }}
+                    </span>
+                </div>
+
+                <div>
+                    <span class="dato-label">Cantidad de habitaciones reservadas</span>
+                    <span class="dato-valor">{{ habitaciones|length }}</span>
+                </div>
+            </div>
+
+            <h3 class="mt-4 mb-3 fs-5">Habitaciones reservadas</h3>
+
+            {% if habitaciones %}
+                <div class="tabla-contenedor">
+                    <table class="tabla-detalle">
+                        <thead>
+                            <tr>
+                                <th>Habitación</th>
+                                <th>Unidad</th>
+                                <th>Entrada</th>
+                                <th>Salida</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for habitacion in habitaciones %}
+                                <tr>
+                                    <td>
+                                        {{ habitacion.id_habitaciones.nombre|default:"No especificada" }}
+                                    </td>
+                                    <td>
+                                        {{ habitacion.id_unidad.nombre_unidad|default:"No asignada" }}
+                                    </td>
+                                    <td>
+                                        {{ habitacion.fecha_check_in|date:"d/m/Y"|default:"No registrada" }}
+                                        {% if habitacion.check_in %}
+                                            {{ habitacion.check_in|time:"H:i" }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ habitacion.fecha_check_out|date:"d/m/Y"|default:"No registrada" }}
+                                        {% if habitacion.check_out %}
+                                            {{ habitacion.check_out|time:"H:i" }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="sin-datos">
+                    No hay habitaciones registradas en esta cotización.
+                </p>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    <!-- CONCEPTOS DE LA COTIZACIÓN -->
+    <section class="detalle-card">
+        <h2>Conceptos cotizados</h2>
+
+        {% if detalles %}
+            <div class="tabla-contenedor">
+                <table class="tabla-detalle">
+                    <thead>
+                        <tr>
+                            <th>Concepto</th>
+                            <th>Descripción</th>
+                            <th>Cantidad</th>
+                            <th>Precio unitario</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detalle in detalles %}
+                            <tr>
+                                <td>{{ detalle.concepto|default:"Sin concepto" }}</td>
+                                <td>{{ detalle.descripcion|default:"—" }}</td>
+                                <td>
+                                    {{ detalle.cantidad|default:"0" }}
+                                    {{ detalle.unidad|default:"" }}
+                                </td>
+                                <td>${{ detalle.precio_unitario|floatformat:2 }}</td>
+                                <td>${{ detalle.subtotal|floatformat:2 }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="sin-datos">
+                No hay conceptos registrados en el detalle de esta cotización.
+            </p>
+        {% endif %}
+    </section>
+
+    <!-- RESUMEN ECONÓMICO -->
+    <section class="detalle-card">
+        <h2>Resumen económico</h2>
+
+        <div class="resumen">
+            <div class="resumen-fila">
+                <span>Subtotal</span>
+                <strong>${{ cotizacion.subtotal|floatformat:2 }}</strong>
+            </div>
+
+            <div class="resumen-fila">
+                <span>Propina ({{ cotizacion.porcentaje_propina|default:"0" }}%)</span>
+                <strong>${{ cotizacion.monto_propina|floatformat:2 }}</strong>
+            </div>
+
+            <div class="resumen-fila">
+                <span>Descuento</span>
+                <strong>${{ cotizacion.descuento|floatformat:2 }}</strong>
+            </div>
+
+            <div class="resumen-fila resumen-total">
+                <span>Total cotizado</span>
+                <span>${{ cotizacion.total|floatformat:2 }}</span>
+            </div>
+
+            <div class="resumen-fila">
+                <span>Total pagado</span>
+                <strong>${{ total_pagado|floatformat:2 }}</strong>
+            </div>
+
+            <div class="resumen-fila saldo">
+                <span>Saldo pendiente</span>
+                <span>${{ saldo_pendiente|floatformat:2 }}</span>
+            </div>
+        </div>
+    </section>
+        
+    <!-- HISTORIAL DE PAGOS -->
+    <section class="detalle-card">
+        <h2>Historial de pagos</h2>
+
+        {% if pagos %}
+            <div class="tabla-contenedor">
+                <table class="tabla-detalle">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Método de pago</th>
+                            <th>Tipo</th>
+                            <th>Referencia</th>
+                            <th>Monto</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pago in pagos %}
+                            <tr>
+                                <td>
+                                    {{ pago.fecha_pago|date:"d/m/Y"|default:"No registrada" }}
+                                </td>
+                                <td>
+                                    {{ pago.metodo_pago.nombre|default:"No especificado" }}
+                                </td>
+                                <td>{{ pago.tipo_pago|default:"—" }}</td>
+                                <td>{{ pago.numero_referencia|default:"—" }}</td>
+                                <td>${{ pago.monto|floatformat:2 }}</td>
+                                <td>
+                                    <span class="estado">
+                                        {{ pago.estado_pago|default:"Sin estado" }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="sin-datos">
+                Todavía no hay pagos registrados para esta cotización.
+            </p>
+        {% endif %}
+    </section>
+div>
+
+{% endblock %}
