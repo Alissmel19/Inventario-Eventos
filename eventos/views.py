@@ -2,8 +2,8 @@ import json
 import uuid
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-
-
+from django.db.models import Sum, Q
+from collections import Counter
 from decimal import Decimal, InvalidOperation
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -28,6 +28,7 @@ from .models import HabitacionesUnidades, DetalleHospedaje
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.core.exceptions import ValidationError
+
 
 
 from .models import (
@@ -63,6 +64,8 @@ from .models import (
     HabitacionesUnidades,
     DetalleHospedaje,
     MetodosPago,
+
+    Cotizaciones, Eventos, Clientes, Pagos
 
     
 
@@ -124,32 +127,77 @@ def login_view(request):
 
 # ============================================================
 
-@login_required(login_url="login")
-
 def dashboard(request):
+    hoy = timezone.localdate()
+    anio = hoy.year
+    mes = hoy.month
 
-    context = {
+    # Cotizaciones creadas durante el mes actual
+    cotizaciones_mes = Cotizaciones.objects.filter(
+        fecha_creacion__year=anio,
+        fecha_creacion__month=mes
+    ).count()
 
-        "total_clientes": Clientes.objects.count(),
+    # Eventos confirmados según el estado de su cotización
+    estados_aceptados = [
+        "aceptada",
+        "aceptado",
+        "confirmada",
+        "confirmado",
+    ]
 
-        "total_eventos": Eventos.objects.count(),
-
-        "total_cotizaciones": Cotizaciones.objects.count(),
-
-        "total_pagos": Pagos.objects.count(),
-
-    }
-
-    return render(
-
-        request,
-
-        "dashboard.html",
-
-        context
-
+    eventos_confirmados = (
+        Cotizaciones.objects
+        .filter(
+            estado__iregex=r"^(aceptada|aceptado|confirmada|confirmado)$",
+            evento__isnull=False,
+        )
+        .values("evento_id")
+        .distinct()
+        .count()
     )
 
+    # Total de clientes registrados
+    total_clientes = Clientes.objects.count()
+
+    # Total de pagos registrados
+    ingresos = (
+        Pagos.objects.aggregate(total=Sum("monto"))["total"]
+        or 0
+    )
+
+    # Cotizaciones más recientes
+    cotizaciones_recientes = (
+        Cotizaciones.objects
+        .select_related("evento__cliente")
+        .order_by("-fecha_creacion")[:5]
+    )
+
+    # Eventos por mes del año actual
+    fechas_eventos = Eventos.objects.filter(
+        fecha_evento__year=anio
+    ).values_list("fecha_evento", flat=True)
+
+    conteo_meses = Counter(
+        fecha.month for fecha in fechas_eventos
+    )
+
+    eventos_por_mes = [
+        conteo_meses.get(numero_mes, 0)
+        for numero_mes in range(1, 13)
+    ]
+
+    context = {
+        "total_cotizaciones_mes": cotizaciones_mes,
+        "eventos_confirmados": eventos_confirmados,
+        "total_clientes": total_clientes,
+        "ingresos_registrados": ingresos,
+        "cotizaciones_recientes": cotizaciones_recientes,
+        "eventos_por_mes": eventos_por_mes,
+        "anio_actual": anio,
+    }
+
+    return render(request, "dashboard.html", context)
 # ============================================================
 
 # CERRAR SESIÃ“N
@@ -693,125 +741,49 @@ def nueva_cotizacion(request):
 
             )
 
+            
             # Preparar los detalles de la cotización
-
             subtotal = Decimal("0.00")
-
             detalles = []
 
+            
             for item in conceptos:
-
                 nombre = str(item.get("nombre") or "").strip()
-
                 unidad = str(item.get("unidad") or "unidad")[:50]
-
                 cantidad = Decimal(str(item.get("cantidad") or "1"))
-
                 precio = Decimal(str(item.get("precio") or "0"))
-
                 tipo = str(item.get("tipo") or "")
+                incluido = item.get("incluido") is True
 
                 if not nombre or cantidad <= 0 or precio < 0:
-
                     return JsonResponse({
-
                         "ok": False,
-
                         "error": "Hay un concepto con datos inválidos."
-
                     }, status=400)
 
-                importe = (cantidad * precio).quantize(
-
-                    Decimal("0.01")
-
-                )
-
-                subtotal += importe
+                if incluido:
+                    importe = Decimal("0.00")
+                else:
+                    importe = (cantidad * precio).quantize(
+                        Decimal("0.01")
+                    )
+                    subtotal += importe
 
                 detalles.append({
-
                     "nombre": nombre[:250],
-
                     "tipo": tipo,
-
                     "unidad": unidad,
-
                     "cantidad": cantidad,
-
                     "precio": precio,
-
                     "subtotal": importe,
-
                 })
 
-            # Paquete estándar: $21.50 por persona
 
-                    
-            
-            # Paquete estándar: $21.50 por persona
-            
-# Calcular el precio del paquete seleccionado
-            # Calcular el precio del paquete seleccionado
-            precios_paquetes = {
-                "1": Decimal("37.50"),  # Evento privado premium
-                "4": Decimal("21.50"),  # Evento privado estándar
-            }
-
-            if paquete_id in precios_paquetes:
-                precio_persona = precios_paquetes[paquete_id]
-
-                subtotal_paquete = (
-                    precio_persona * Decimal(personas)
-                ).quantize(Decimal("0.01"))
-
-                detalles_paquete = {
-                    "nombre": (
-                        "Evento privado premium"
-                        if paquete_id == "1"
-                        else "Paquete privado estándar"
-                    ),
-                    "tipo": "Paquete",
-                    "unidad": "persona",
-                    "cantidad": Decimal(personas),
-                    "precio": precio_persona,
-                    "subtotal": subtotal_paquete,
-                }
-
-                detalles_incluidos = []
-
-                for concepto in conceptos:
-                    nombre = str(concepto.get("nombre") or "").strip()
-
-                    if not nombre:
-                        continue
-
-                    cantidad = Decimal(
-                        str(concepto.get("cantidad") or "1")
-                    )
-                    precio = Decimal(
-                        str(concepto.get("precio") or "0")
-                    )
-
-                    if cantidad <= 0 or precio < 0:
-                        return JsonResponse({
-                            "ok": False,
-                            "error": "Hay un concepto con datos inválidos."
-                        }, status=400)
-
-                    detalles_incluidos.append({
-                        "nombre": nombre[:250],
-                        "tipo": str(concepto.get("tipo") or ""),
-                        "unidad": str(
-                            concepto.get("unidad") or "unidad"
-                        )[:50],
-                        "cantidad": cantidad,
-                        "precio": precio,
-                        "subtotal": Decimal("0.00"),
-                    })
-
-                detalles = [detalles_paquete] + detalles_incluidos
-                subtotal = subtotal_paquete
+            # Corporativo y consumo llevan 10 % de propina.
+            if paquete_id in ("2", "3"):
+                porcentaje_propina = Decimal("10.00")
+            else:
+                porcentaje_propina = Decimal("0.00")
 
             # Aplicar descuento y calcular propina
             base = max(subtotal - descuento, Decimal("0.00"))

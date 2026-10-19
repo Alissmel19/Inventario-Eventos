@@ -32,25 +32,31 @@ function obtenerRadioPaquete(id) {
     ).find(radio => String(radio.value) === String(id));
 }
 
+
 function obtenerPaqueteActual(id) {
     const radio = obtenerRadioPaquete(id);
     const tarjeta = radio?.closest(".package-option");
-    const configurado = paquetes[String(id)] || {};
+
+    // paquetes_json llega como una lista desde Django.
+    const configurado = Array.isArray(paquetes)
+        ? paquetes.find(p => String(p.id) === String(id)) || {}
+        : paquetes[String(id)] || {};
 
     return {
         ...configurado,
         nombre:
             radio?.dataset.nombre ||
-            tarjeta?.querySelector("h3")?.textContent?.trim() ||
             configurado.nombre ||
+            tarjeta?.querySelector("h3")?.textContent?.trim() ||
             "Paquete seleccionado",
         descripcion:
             radio?.dataset.descripcion ||
-            tarjeta?.querySelector("p")?.textContent?.trim() ||
             configurado.descripcion ||
+            tarjeta?.querySelector("p")?.textContent?.trim() ||
             ""
     };
 }
+
 
 function nombrePaqueteActual() {
     if (!paqueteSeleccionado) return "";
@@ -78,11 +84,7 @@ function seleccionarPaquete(id) {
     id = String(id);
 
     const radioActual = obtenerRadioPaquete(id);
-
-    if (!radioActual) {
-        console.warn("No se encontró el paquete:", id);
-        return;
-    }
+    if (!radioActual) return;
 
     if (
         paqueteSeleccionado &&
@@ -90,39 +92,79 @@ function seleccionarPaquete(id) {
         conceptos.length > 0
     ) {
         const continuar = confirm(
-            "Cambiar de paquete eliminará los conceptos agregados. ¿Deseas continuar?"
+            "Cambiar de paquete actualizará los incluidos y eliminará " +
+            "los conceptos seleccionados. ¿Deseas continuar?"
         );
 
         if (!continuar) {
-            const radioAnterior = obtenerRadioPaquete(
-                paqueteSeleccionado
-            );
-
-            if (radioAnterior) radioAnterior.checked = true;
+            const anterior = obtenerRadioPaquete(paqueteSeleccionado);
+            if (anterior) anterior.checked = true;
             radioActual.checked = false;
-
             return;
         }
-
-        conceptos = [];
     }
 
     paqueteSeleccionado = id;
     radioActual.checked = true;
 
     const paquete = obtenerPaqueteActual(id);
+    const nombre = String(paquete.nombre || "").toLowerCase();
+
+    const esPrivado =
+        nombre.includes("privado") &&
+        (
+            nombre.includes("standard") ||
+            nombre.includes("estandar") ||
+            nombre.includes("estándar") ||
+            nombre.includes("premium")
+        );
+
+    // Mostrar información del paquete.
     const info = document.getElementById("packageInfo");
 
     if (info) {
         info.replaceChildren();
 
-        const titulo = document.createElement("strong");
+        const titulo = document.createElement("h3");
         titulo.textContent = paquete.nombre;
 
         const descripcion = document.createElement("p");
-        descripcion.textContent = paquete.descripcion;
+        descripcion.textContent = paquete.descripcion || "";
 
         info.append(titulo, descripcion);
+    }
+
+    // La lista de incluidos se mostrará en el detalle de cotización.
+    const configuracion = document.getElementById("configuracionPaquete");
+    if (configuracion) configuracion.hidden = true;
+
+    const listaServicios = document.getElementById("serviciosIncluidos");
+    if (listaServicios) listaServicios.replaceChildren();
+
+    // Reiniciar los conceptos según el nuevo paquete.
+    conceptos = [];
+
+    if (esPrivado) {
+        const servicios = Array.isArray(paquete.servicios)
+            ? paquete.servicios
+            : [];
+
+          servicios.forEach(servicio => {
+              const nombreServicio = String(servicio.nombre || "").toLowerCase();
+              const esSalon = [1, 19, 24].includes(Number(servicio.id));
+              const esPorUnidad = nombreServicio.includes("florero");
+              const personas = obtenerPersonas();
+
+              conceptos.push({
+                  catalogo_id: Number(servicio.id),
+                  nombre: String(servicio.nombre),
+                  tipo: "Incluido en paquete",
+                  precio: Number(servicio.precio || 0),
+                  unidad: esSalon ? "evento" : esPorUnidad ? "unidad" : "persona",
+                  cantidad: esSalon ? 1 : esPorUnidad ? 1 : personas,
+                  incluido: true
+              });
+          });
     }
 
     const busqueda = document.getElementById("buscarConcepto");
@@ -155,9 +197,10 @@ function esPlatilloEstandar(elemento) {
         .trim()
         .toLowerCase();
 
-    return tipo.includes("standard") ||
-           tipo.includes("estándar") ||
-           tipo.includes("estandar");
+    return tipo.includes("plato estandard") ||
+           tipo.includes("plato estándar") ||
+           tipo.includes("plato standard") ||
+           tipo.includes("plato estandar");
 }
 
 function filtrarCatalogo() {
@@ -171,7 +214,7 @@ function filtrarCatalogo() {
 
     const nombrePaquete = nombrePaqueteActual();
     const esEstandar = esPaqueteEstandar();
-    const esPaquetePremium = nombrePaquete.includes("premium");
+    const esPremium = nombrePaquete.includes("premium");
 
     let visibles = 0;
 
@@ -186,13 +229,13 @@ function filtrarCatalogo() {
 
         if (esEstandar) {
             permitido = esPlatilloEstandar(item);
-        } else if (esPaquetePremium) {
-            permitido = tipo.includes("premium");
+        } else if (esPremium) {
+            permitido =
+                tipo.includes("entrada premium") ||
+                tipo.includes("plato fuerte premium");
         }
 
-        const coincideTexto =
-            !texto || nombre.includes(texto);
-
+        const coincideTexto = !texto || nombre.includes(texto);
         const coincideCategoria =
             categoria === "todas" || tipo === categoria;
 
@@ -201,14 +244,14 @@ function filtrarCatalogo() {
 
         item.style.display = visible ? "" : "none";
 
+        const boton = item.querySelector("button");
+        if (boton) boton.disabled = !visible;
+
         if (visible) visibles++;
     });
 
     const empty = document.getElementById("catalogEmpty");
-
-    if (empty) {
-        empty.style.display = visibles ? "none" : "block";
-    }
+    if (empty) empty.style.display = visibles ? "none" : "block";
 }
 
 window.filtrarCatalogo = filtrarCatalogo;
@@ -217,11 +260,33 @@ window.filtrarCatalogo = filtrarCatalogo;
    SERVICIOS OPCIONALES
 ========================================================= */
 
+
 function filtrarServicios() {
+    const paqueteId = String(paqueteSeleccionado || "");
+
     document.querySelectorAll(".variable-card").forEach(elemento => {
-        elemento.style.display = "";
+        const nombre = (
+            elemento.querySelector("h3")?.textContent || ""
+        ).toLowerCase();
+
+        const boton = elemento.querySelector("button");
+
+        // En eventos por consumo no se permite contratar DJ ni bocinas.
+        const restringido =
+            paqueteId === "3" &&
+            (
+                nombre.includes("dj") ||
+                nombre.includes("bocina")
+            );
+
+        elemento.style.display = restringido ? "none" : "";
+
+        if (boton) {
+            boton.disabled = restringido;
+        }
     });
 }
+
 
 /* =========================================================
    AGREGAR CONCEPTOS
@@ -232,8 +297,10 @@ function agregarConcepto(id, nombre, tipo, precio, unidad) {
         alert("Primero selecciona un paquete.");
         return;
     }
+    console.log("PLATO:", id, nombre, tipo, precio, unidad);
 
     const precioNumero = Number(precio);
+    const unidadNormalizada = String(unidad || "unidad").toLowerCase();
 
     if (!Number.isFinite(precioNumero) || precioNumero < 0) {
         alert("El precio del concepto no es válido.");
@@ -247,11 +314,13 @@ function agregarConcepto(id, nombre, tipo, precio, unidad) {
         nombre: String(nombre),
         tipo: String(tipo || ""),
         precio: precioNumero,
-        unidad: String(unidad || "unidad"),
-        cantidad: unidad === "persona" ? personas : 1
+        unidad: unidadNormalizada,
+        cantidad: unidadNormalizada === "persona" ? personas : 1,
+        incluido: false
     });
 
     renderizarConceptos();
+    calcularTotales();
 }
 
 function agregarVariable(id, nombre, precio, unidad) {
@@ -315,10 +384,18 @@ function cambiarCantidad(index, valor) {
     renderizarConceptos();
 }
 
+
 function eliminarConcepto(index) {
+    const concepto = conceptos[index];
+
+    if (!concepto || concepto.incluido) {
+        return;
+    }
+
     conceptos.splice(index, 1);
     renderizarConceptos();
 }
+
 
 function actualizarPersonas() {
     const personas = obtenerPersonas();
@@ -358,6 +435,7 @@ function crearEntrada(valor, minimo, alCambiar) {
     return entrada;
 }
 
+
 function renderizarConceptos() {
     const tbody = document.getElementById("cotizacionBody");
     const vacio = document.getElementById("emptyMessage");
@@ -371,6 +449,7 @@ function renderizarConceptos() {
     conceptos.forEach((concepto, index) => {
         const fila = document.createElement("tr");
 
+        // Nombre y tipo de concepto
         const celdaNombre = document.createElement("td");
 
         const nombre = document.createElement("strong");
@@ -385,28 +464,37 @@ function renderizarConceptos() {
             tipo
         );
 
+        // Cantidad: bloqueada únicamente para los incluidos
         const celdaCantidad = document.createElement("td");
+
 
         celdaCantidad.appendChild(
             crearEntrada(
                 concepto.cantidad,
-                "0.01",
+                0.01,
                 valor => cambiarCantidad(index, valor)
             )
         );
 
+        // Unidad
         const celdaUnidad = crearCelda(concepto.unidad);
 
+        // Precio: bloqueado únicamente para los incluidos
         const celdaPrecio = document.createElement("td");
 
-        celdaPrecio.appendChild(
-            crearEntrada(
-                concepto.precio.toFixed(2),
-                "0",
-                valor => cambiarPrecio(index, valor)
-            )
-        );
+        if (concepto.incluido) {
+            celdaPrecio.textContent = dinero(concepto.precio);
+        } else {
+            celdaPrecio.appendChild(
+                crearEntrada(
+                    concepto.precio,
+                    "0.01",
+                    valor => cambiarPrecio(index, valor)
+                )
+            );
+        }
 
+        // Total
         const celdaTotal = document.createElement("td");
         const total = document.createElement("strong");
 
@@ -416,18 +504,30 @@ function renderizarConceptos() {
 
         celdaTotal.appendChild(total);
 
+        // Acción: los incluidos no se pueden eliminar
         const celdaEliminar = document.createElement("td");
-        const boton = document.createElement("button");
 
-        boton.type = "button";
-        boton.className = "delete-btn";
-        boton.textContent = "Eliminar";
-        boton.addEventListener("click", () => {
-            eliminarConcepto(index);
-        });
+        if (concepto.incluido) {
+            const etiqueta = document.createElement("span");
+            etiqueta.textContent = "Incluido";
+            etiqueta.className = "concepto-incluido";
 
-        celdaEliminar.appendChild(boton);
+            celdaEliminar.appendChild(etiqueta);
+        } else {
+            const boton = document.createElement("button");
 
+            boton.type = "button";
+            boton.className = "delete-btn";
+            boton.textContent = "Eliminar";
+
+            boton.addEventListener("click", () => {
+                eliminarConcepto(index);
+            });
+
+            celdaEliminar.appendChild(boton);
+        }
+
+        // Agregar todas las celdas a la fila
         fila.append(
             celdaNombre,
             celdaCantidad,
@@ -467,15 +567,19 @@ function actualizarVisibilidadPropina() {
     }
 }
 
-function calcularTotales() {
-    let subtotal = conceptos.reduce((suma, concepto) => {
-        return suma + concepto.precio * concepto.cantidad;
-    }, 0);
 
-    // Evento privado estándar: $21.50 por persona.
-    if (esPaqueteEstandar()) {
-        subtotal = 21.50 * obtenerPersonas();
-    }
+function calcularTotales() {
+    // Los incluidos se muestran, pero no se cobran nuevamente.
+    const conceptosCobrables = conceptos.filter(
+        concepto => concepto.incluido !== true
+    );
+
+    const subtotal = conceptosCobrables.reduce((suma, concepto) => {
+        return suma + (
+            Number(concepto.precio || 0) *
+            Number(concepto.cantidad || 0)
+        );
+    }, 0);
 
     const descuento = Math.max(
         0,
@@ -490,6 +594,7 @@ function calcularTotales() {
 
     const propina = base * porcentajePropina / 100;
     const total = base + propina;
+    const personas = Math.max(1, obtenerPersonas());
 
     function actualizar(id, valor) {
         const elemento = document.getElementById(id);
@@ -503,7 +608,7 @@ function calcularTotales() {
     actualizar("baseImponible", base);
     actualizar("montoPropina", propina);
     actualizar("total", total);
-    actualizar("costoPersona", total / obtenerPersonas());
+    actualizar("costoPersona", total / personas);
 
     return {
         subtotal,
@@ -582,14 +687,16 @@ async function generarCotizacion() {
         paquete_nombre: paquete.nombre,
 
 
+       
         conceptos: conceptos.map(concepto => ({
-        catalogo_id: concepto.catalogo_id,
-        nombre: concepto.nombre,
-        tipo: concepto.tipo,
-        precio: Number(concepto.precio),
-        unidad: concepto.unidad,
-        cantidad: Number(concepto.cantidad)
-    })),
+            catalogo_id: concepto.catalogo_id,
+            nombre: concepto.nombre,
+            tipo: concepto.tipo,
+            precio: Number(concepto.precio),
+            unidad: concepto.unidad,
+            cantidad: Number(concepto.cantidad),
+            incluido: concepto.incluido === true
+        })),
 
 
         subtotal: totales.subtotal,

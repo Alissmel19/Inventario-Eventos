@@ -66,19 +66,6 @@
 
         </a>
 
-        <button
-
-            type="button"
-
-            class="btn btn-gold"
-
-            onclick="window\.print()"
-
-        >
-
-            Imprimir
-
-        </button>
 
     </div>
 
@@ -482,17 +469,27 @@
 
     </div>
 
-    <div
-
-        id="packageInfo"
-
-        class="package-selected"
-
-    >
-
-        Selecciona un paquete para ver su información.
-
+    
+    <div id="packageInfo" class="package-selected">
+        <p>Selecciona un paquete para ver su información.</p>
     </div>
+
+    <div id="configuracionPaquete" class="package-configuration" hidden>
+        <div class="section-title">
+            <h3>Incluido en el paquete</h3>
+            <p>Estos servicios forman parte del paquete seleccionado.</p>
+        </div>
+
+        <div id="serviciosIncluidos" class="servicios-incluidos"></div>
+
+        <div class="section-title">
+            <h3>Personalizá tu menú</h3>
+            <p>Seleccioná los platillos permitidos para el paquete.</p>
+        </div>
+
+        <div id="seleccionPlatillos"></div>
+    </div>
+
 
 </section>
 
