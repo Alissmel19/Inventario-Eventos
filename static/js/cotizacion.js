@@ -79,6 +79,102 @@ function llevaPropina() {
     return nombre.includes("consumo") ||
            nombre.includes("corporativo");
 }
+function convertirConceptoIncluido(item, esSubpaquete = false) {
+    const grupo = String(item.grupo || "").toLowerCase();
+
+    const unidades = {
+        platillo: "persona",
+        bebida: "persona",
+        servicio: "evento",
+        servicio_opcional: "evento",
+        montaje: "unidad"
+    };
+
+    const unidad = unidades[grupo] || "unidad";
+    const personas = obtenerPersonas();
+
+    return {
+        catalogo_id: Number(item.id),
+        nombre: String(item.nombre || ""),
+        tipo: grupo,
+        grupo: grupo,
+        precio: Number(item.precio ?? 0),
+        unidad: unidad,
+        cantidad: unidad === "persona"
+            ? personas
+            : Number(item.cantidad || 1),
+        incluido: true,
+        obligatorio: Boolean(item.obligatorio),
+        cortesia: Boolean(item.cortesia),
+        esSubpaquete: esSubpaquete
+    };
+}
+
+function cargarConceptosIncluidos(lista) {
+    if (!Array.isArray(lista)) return;
+
+    lista.forEach(item => {
+        conceptos.push(convertirConceptoIncluido(item));
+    });
+}
+
+function cargarSelectorSubpaquetes(paquete) {
+    const contenedor = document.getElementById("contenedorSubpaquetes");
+    const selector = document.getElementById("subpaqueteSeleccionado");
+
+    if (!contenedor || !selector) return;
+
+    selector.replaceChildren();
+
+    const inicial = document.createElement("option");
+    inicial.value = "";
+    inicial.textContent = "Selecciona un menú";
+    selector.appendChild(inicial);
+
+    const subpaquetes = Array.isArray(paquete.subpaquetes)
+        ? paquete.subpaquetes
+        : [];
+
+    if (!subpaquetes.length) {
+        contenedor.hidden = true;
+        return;
+    }
+
+    subpaquetes.forEach(subpaquete => {
+        const opcion = document.createElement("option");
+        opcion.value = String(subpaquete.id);
+        opcion.textContent = subpaquete.nombre;
+        selector.appendChild(opcion);
+    });
+
+    contenedor.hidden = false;
+}
+
+function seleccionarSubpaquete(id) {
+    if (!paqueteSeleccionado || !id) return;
+
+    const paquete = obtenerPaqueteActual(paqueteSeleccionado);
+
+    const subpaquete = (paquete.subpaquetes || []).find(
+        item => String(item.id) === String(id)
+    );
+
+    if (!subpaquete) return;
+
+    // Quitar únicamente los conceptos del subpaquete anterior.
+    conceptos = conceptos.filter(item => !item.esSubpaquete);
+
+    // Agregar los conceptos del subpaquete seleccionado.
+    const nuevos = (subpaquete.conceptos || []).map(item =>
+        convertirConceptoIncluido(item, true)
+    );
+
+    conceptos.push(...nuevos);
+
+    renderizarConceptos();
+    calcularTotales();
+}
+
 
 function seleccionarPaquete(id) {
     id = String(id);
@@ -108,18 +204,8 @@ function seleccionarPaquete(id) {
     radioActual.checked = true;
 
     const paquete = obtenerPaqueteActual(id);
-    const nombre = String(paquete.nombre || "").toLowerCase();
 
-    const esPrivado =
-        nombre.includes("privado") &&
-        (
-            nombre.includes("standard") ||
-            nombre.includes("estandar") ||
-            nombre.includes("estándar") ||
-            nombre.includes("premium")
-        );
-
-    // Mostrar información del paquete.
+    // Información del paquete.
     const info = document.getElementById("packageInfo");
 
     if (info) {
@@ -134,37 +220,34 @@ function seleccionarPaquete(id) {
         info.append(titulo, descripcion);
     }
 
-    // La lista de incluidos se mostrará en el detalle de cotización.
-    const configuracion = document.getElementById("configuracionPaquete");
-    if (configuracion) configuracion.hidden = true;
-
-    const listaServicios = document.getElementById("serviciosIncluidos");
-    if (listaServicios) listaServicios.replaceChildren();
-
-    // Reiniciar los conceptos según el nuevo paquete.
+    // Reiniciar conceptos.
     conceptos = [];
 
-    if (esPrivado) {
-        const servicios = Array.isArray(paquete.servicios)
-            ? paquete.servicios
-            : [];
+    // Cargar conceptos generales del paquete.
+    cargarConceptosIncluidos(paquete.conceptos || []);
 
-          servicios.forEach(servicio => {
-              const nombreServicio = String(servicio.nombre || "").toLowerCase();
-              const esSalon = [1, 19, 24].includes(Number(servicio.id));
-              const esPorUnidad = nombreServicio.includes("florero");
-              const personas = obtenerPersonas();
+    // Cargar selector de subpaquetes.
+    cargarSelectorSubpaquetes(paquete);
 
-              conceptos.push({
-                  catalogo_id: Number(servicio.id),
-                  nombre: String(servicio.nombre),
-                  tipo: "Incluido en paquete",
-                  precio: Number(servicio.precio || 0),
-                  unidad: esSalon ? "evento" : esPorUnidad ? "unidad" : "persona",
-                  cantidad: esSalon ? 1 : esPorUnidad ? 1 : personas,
-                  incluido: true
-              });
-          });
+    const selector = document.getElementById("subpaqueteSeleccionado");
+    if (selector) selector.value = "";
+
+    // Mostrar configuración.
+    const configuracion = document.getElementById("configuracionPaquete");
+    if (configuracion) configuracion.hidden = false;
+
+    // Mostrar conceptos incluidos.
+    const listaServicios = document.getElementById("serviciosIncluidos");
+
+    if (listaServicios) {
+        listaServicios.replaceChildren();
+
+        conceptos.forEach(concepto => {
+            const elemento = document.createElement("div");
+            elemento.className = "servicio-incluido";
+            elemento.textContent = concepto.nombre;
+            listaServicios.appendChild(elemento);
+        });
     }
 
     const busqueda = document.getElementById("buscarConcepto");
@@ -179,7 +262,6 @@ function seleccionarPaquete(id) {
     renderizarConceptos();
     calcularTotales();
 }
-
 /* =========================================================
    CATÁLOGO Y FILTROS
 ========================================================= */
@@ -203,6 +285,8 @@ function esPlatilloEstandar(elemento) {
            tipo.includes("plato estandar");
 }
 
+
+
 function filtrarCatalogo() {
     const texto = (
         document.getElementById("buscarConcepto")?.value || ""
@@ -212,37 +296,36 @@ function filtrarCatalogo() {
         document.getElementById("categoryFilter")?.value || "todas"
     ).toLowerCase().trim();
 
-    const nombrePaquete = nombrePaqueteActual();
-    const esEstandar = esPaqueteEstandar();
-    const esPremium = nombrePaquete.includes("premium");
+    // IDs de los conceptos incluidos en el paquete seleccionado.
+    const incluidos = new Set(
+        conceptos
+            .filter(c => c.incluido)
+            .map(c => `${String(c.grupo).toLowerCase()}-${String(c.catalogo_id)}`)
+    );
+
+    const elementos = Array.from(
+        document.querySelectorAll(".catalog-item")
+    );
 
     let visibles = 0;
 
-    document.querySelectorAll(".catalog-item").forEach(item => {
-        const nombre = (item.dataset.nombre || "")
-            .toLowerCase().trim();
+    elementos.forEach(item => {
+        const nombre = (item.dataset.nombre || "").toLowerCase().trim();
+        const tipo = (item.dataset.tipo || "").toLowerCase().trim();
+        const grupo = (item.dataset.grupo || "").toLowerCase().trim();
+        const id = String(item.dataset.id || "");
 
-        const tipo = (item.dataset.tipo || "")
-            .toLowerCase().trim();
-
-        let permitido = true;
-
-        if (esEstandar) {
-            permitido = esPlatilloEstandar(item);
-        } else if (esPremium) {
-            permitido =
-                tipo.includes("entrada premium") ||
-                tipo.includes("plato fuerte premium");
-        }
+        // Comprobar si pertenece al paquete seleccionado.
+        const esIncluido = incluidos.has(`${grupo}-${id}`);
 
         const coincideTexto = !texto || nombre.includes(texto);
         const coincideCategoria =
             categoria === "todas" || tipo === categoria;
 
-        const visible =
-            permitido && coincideTexto && coincideCategoria;
+        const visible = coincideTexto && coincideCategoria;
 
         item.style.display = visible ? "" : "none";
+        item.classList.toggle("concepto-incluido", esIncluido);
 
         const boton = item.querySelector("button");
         if (boton) boton.disabled = !visible;
@@ -250,8 +333,25 @@ function filtrarCatalogo() {
         if (visible) visibles++;
     });
 
+    // El contenedor correcto de tu HTML es .catalog-grid.
+    const catalogo = document.querySelector(".catalog-grid");
+
+    if (catalogo) {
+        const ordenados = [...elementos].sort((a, b) => {
+            const aIncluido = a.classList.contains("concepto-incluido");
+            const bIncluido = b.classList.contains("concepto-incluido");
+
+            return Number(bIncluido) - Number(aIncluido);
+        });
+
+        ordenados.forEach(item => catalogo.appendChild(item));
+    }
+
     const empty = document.getElementById("catalogEmpty");
-    if (empty) empty.style.display = visibles ? "none" : "block";
+
+    if (empty) {
+        empty.style.display = visibles ? "none" : "block";
+    }
 }
 
 window.filtrarCatalogo = filtrarCatalogo;
@@ -291,13 +391,11 @@ function filtrarServicios() {
 /* =========================================================
    AGREGAR CONCEPTOS
 ========================================================= */
-
-function agregarConcepto(id, nombre, tipo, precio, unidad) {
+function agregarConcepto(id, nombre, tipo, precio, unidad, grupo = "") {
     if (!paqueteSeleccionado) {
         alert("Primero selecciona un paquete.");
         return;
     }
-    console.log("PLATO:", id, nombre, tipo, precio, unidad);
 
     const precioNumero = Number(precio);
     const unidadNormalizada = String(unidad || "unidad").toLowerCase();
@@ -313,6 +411,7 @@ function agregarConcepto(id, nombre, tipo, precio, unidad) {
         catalogo_id: Number(id),
         nombre: String(nombre),
         tipo: String(tipo || ""),
+        grupo: String(grupo || ""),
         precio: precioNumero,
         unidad: unidadNormalizada,
         cantidad: unidadNormalizada === "persona" ? personas : 1,
@@ -323,6 +422,7 @@ function agregarConcepto(id, nombre, tipo, precio, unidad) {
     calcularTotales();
 }
 
+window.agregarConcepto = agregarConcepto;
 function agregarVariable(id, nombre, precio, unidad) {
     if (!paqueteSeleccionado) {
         alert("Primero selecciona un paquete.");

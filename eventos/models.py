@@ -502,6 +502,16 @@ class Pagos(models.Model):
     monto = models.DecimalField(max_digits=12, decimal_places=2)
     tipo_pago = models.CharField(max_length=50, blank=True, null=True)
     numero_referencia = models.CharField(max_length=100, blank=True, null=True)
+    numero_dte = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
+    archivo_dte = models.TextField(
+        blank=True,
+        null=True
+    )
     observaciones = models.TextField(blank=True, null=True)
 
     # Nuevos campos
@@ -630,3 +640,186 @@ class TiposMesa(models.Model):
     class Meta:
         managed = False
         db_table = 'tipos_mesa'
+
+
+class SubpaquetesEvento(models.Model):
+    id_subpaquete = models.AutoField(primary_key=True)
+
+    paquete = models.ForeignKey(
+        PaquetesEvento,
+        models.DO_NOTHING,
+        db_column="id_paquete",
+        related_name="subpaquetes"
+    )
+
+    nombre = models.CharField(max_length=100)
+    descripcion = models.TextField(blank=True, null=True)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        managed = False
+        db_table = "subpaquetes_evento"
+
+    def __str__(self):
+        return self.nombre
+
+
+class PaqueteConceptos(models.Model):
+    id = models.BigAutoField(primary_key=True)
+
+    paquete = models.ForeignKey(
+        PaquetesEvento,
+        models.DO_NOTHING,
+        db_column="id_paquete",
+        related_name="conceptos"
+    )
+
+    platillo = models.ForeignKey(
+        Platillo,
+        models.DO_NOTHING,
+        db_column="id_platillo",
+        blank=True,
+        null=True
+    )
+
+    bebida = models.ForeignKey(
+        Bebidas,
+        models.DO_NOTHING,
+        db_column="id_bebida",
+        blank=True,
+        null=True
+    )
+
+    servicio = models.ForeignKey(
+        Servicios,
+        models.DO_NOTHING,
+        db_column="id_servicio",
+        blank=True,
+        null=True
+    )
+
+    servicio_opcional = models.ForeignKey(
+        ServiciosOpcionales,
+        models.DO_NOTHING,
+        db_column="id_servicio_opcional",
+        blank=True,
+        null=True
+    )
+
+    elemento_montaje = models.ForeignKey(
+        ElementosMontaje,
+        models.DO_NOTHING,
+        db_column="id_elemento_montaje",
+        blank=True,
+        null=True
+    )
+
+    area = models.ForeignKey(
+        AreasEvento,
+        models.DO_NOTHING,
+        db_column="id_area",
+        blank=True,
+        null=True
+    )
+
+    cantidad = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_aplicado = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
+    obligatorio = models.BooleanField()
+
+    class Meta:
+        managed = False
+        db_table = "paquete_conceptos"
+
+
+class SubpaqueteConceptos(models.Model):
+    id = models.AutoField(primary_key=True)
+
+    subpaquete = models.ForeignKey(
+        "SubpaquetesEvento",
+        models.DO_NOTHING,
+        db_column="id_subpaquete",
+        related_name="conceptos"
+    )
+
+    platillo = models.ForeignKey(
+        Platillo,
+        models.DO_NOTHING,
+        db_column="id_platillo",
+        blank=True,
+        null=True
+    )
+
+    bebida = models.ForeignKey(
+        Bebidas,
+        models.DO_NOTHING,
+        db_column="id_bebida",
+        blank=True,
+        null=True
+    )
+
+    servicio = models.ForeignKey(
+        Servicios,
+        models.DO_NOTHING,
+        db_column="id_servicio",
+        blank=True,
+        null=True
+    )
+
+    servicio_opcional = models.ForeignKey(
+        ServiciosOpcionales,
+        models.DO_NOTHING,
+        db_column="id_servicio_opcional",
+        blank=True,
+        null=True
+    )
+
+    elemento_montaje = models.ForeignKey(
+        ElementosMontaje,
+        models.DO_NOTHING,
+        db_column="id_elemento_montaje",
+        blank=True,
+        null=True
+    )
+
+    id_concepto = models.BigIntegerField(blank=True, null=True)
+    obligatorio = models.BooleanField()
+    cantidad = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_unitario = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
+    es_cortesia = models.BooleanField()
+    menu = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
+    class Meta:
+        managed = False
+        db_table = "subpaquete_conceptos"
+
+class ReservaHabitacionWeb(models.Model):
+    id = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=100)
+    telefono = models.CharField(max_length=20)
+    fecha_entrada = models.DateField()
+    fecha_salida = models.DateField()
+    personas = models.PositiveIntegerField()
+    tipo_habitacion = models.CharField(max_length=100)
+    creado = models.DateTimeField()
+    estado = models.CharField(max_length=20)
+
+    class Meta:
+        managed = False
+        db_table = "hotel_reservahabitacion"
+
+    def __str__(self):
+        return f"{self.nombre} - {self.tipo_habitacion}"

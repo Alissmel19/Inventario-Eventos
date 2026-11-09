@@ -447,25 +447,21 @@ main {
 
 
 
+                                
                                 {% for item in datos_cotizaciones %}
-
                                     <option
-
                                         value="{{ item.cotizacion.cotizacion_id }}"
-
                                         data-categoria="{{ item.categoria }}"
-
-                                        data-total="{{ item.cotizacion.total }}">
-
+                                        data-total="{{ item.cotizacion.total }}"
+                                        data-total-aprobado="{{ item.total_aprobado }}"
+                                        data-total-pendiente="{{ item.total_pendiente_validacion }}"
+                                        data-disponible="{{ item.monto_disponible_registrar }}">
                                         {{ item.categoria }} —
-
                                         {{ item.cotizacion.numero_cotizacion }} —
-
                                         ${{ item.cotizacion.total }}
-
                                     </option>
-
                                 {% endfor %}
+
 
                             </select>
 
@@ -513,6 +509,20 @@ main {
 
                             </div>
 
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="summary-box">
+                                <div class="summary-label">Pagos aprobados</div>
+                                <div class="summary-value" id="pagosAprobados">$0.00</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="summary-box">
+                                <div class="summary-label">Pendientes de validación</div>
+                                <div class="summary-value" id="pagosPendientes">$0.00</div>
+                            </div>
                         </div>
 
                     </div>
@@ -671,12 +681,57 @@ main {
 
                     </div>
 
+
+
+
+                
+
+
                 </div>
 
             </div>
+            <div class="payment-card mb-4">
+                <div class="card-heading">
+                    <h2>
+                        <i class="bi bi-receipt me-2"></i>
+                        Documento Tributario Electrónico (DTE)
+                    </h2>
+                </div>
 
+                <div class="card-body-custom">
+                    <div class="row g-4">
+                        <div class="col-md-5">
+                            <label class="form-label" for="numero_dte">
+                                Número de DTE
+                            </label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="numero_dte"
+                                name="numero_dte"
+                                maxlength="100"
+                                placeholder="Ingresá el número de DTE"
+                            >
+                        </div>
 
-
+                        <div class="col-md-7">
+                            <label class="form-label" for="archivo_dte">
+                                Archivo del DTE
+                            </label>
+                            <input
+                                type="file"
+                                class="form-control"
+                                id="archivo_dte"
+                                name="archivo_dte"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                            >
+                            <small class="text-muted d-block mt-2">
+                                PDF, JPG, JPEG o PNG. Máximo 5 MB.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="d-flex flex-wrap justify-content-end gap-3">
 
                 <a href="{% url 'dashboard' %}" class="btn-outline-beraka">
@@ -731,36 +786,39 @@ main {
 
 
 
-    function actualizarResumen() {
+    
+function actualizarResumen() {
+    const opcion = selector.options[selector.selectedIndex];
 
-        const opcion = selector.options[selector.selectedIndex];
+    const total = Number(opcion?.dataset.total || 0);
+    const anticipo = total * 0.5;
+    const aprobados = Number(opcion?.dataset.totalAprobado || 0);
+    const pendientes = Number(opcion?.dataset.totalPendiente || 0);
+    const saldoPendiente = Math.max(0, total - aprobados);
+    const disponible = Math.max(0, total - aprobados - pendientes);
 
-        const total = Number(opcion?.dataset.total || 0);
+    document.getElementById("totalCotizacion").textContent =
+        dinero(total);
 
-        const anticipo = total * 0.5;
+    document.getElementById("anticipoRequerido").textContent =
+        dinero(anticipo);
 
+    document.getElementById("saldoCotizacion").textContent =
+        dinero(disponible);
 
+    document.getElementById("pagosAprobados").textContent =
+        dinero(aprobados);
 
-        document.getElementById("totalCotizacion").textContent = dinero(total);
+    document.getElementById("pagosPendientes").textContent =
+        dinero(pendientes);
 
-        document.getElementById("anticipoRequerido").textContent = dinero(anticipo);
+    monto.max = disponible.toFixed(2);
 
-        document.getElementById("saldoCotizacion").textContent = dinero(total);
-
-
-
-        monto.max = total > 0 ? total.toFixed(2) : "";
-
-        document.getElementById("ayudaMonto").textContent =
-
-            total > 0
-
-                ? "Anticipo inicial sugerido: " + dinero(anticipo)
-
-                : "Selecciona una cotización para calcular el anticipo.";
-
+    document.getElementById("ayudaMonto").textContent =
+        total > 0
+            ? "Anticipo inicial sugerido: " + dinero(anticipo)
+            : "Selecciona una cotización para calcular el anticipo.";
     }
-
 
 
     function filtrarCategorias() {

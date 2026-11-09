@@ -86,6 +86,12 @@ urlpatterns = [
         name="validar_pago",
     ),
 
+        path(
+        "pagos/<int:pago_id>/dte/",
+        views.subir_dte_pago,
+        name="subir_dte_pago",
+    ),
+
 
 
 

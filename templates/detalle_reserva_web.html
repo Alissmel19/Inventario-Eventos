@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Revisar reserva | BERAKÁ{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+
+    <a href="{% url 'reservas_web' %}"
+       class="btn btn-outline-secondary mb-4">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+
+            <h3 class="fw-bold mb-4">Solicitud de habitación</h3>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <strong>Cliente:</strong>
+                    <p>{{ reserva.nombre }}</p>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Teléfono:</strong>
+                    <p>{{ reserva.telefono }}</p>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Tipo solicitado:</strong>
+                    <p>{{ reserva.tipo_habitacion }}</p>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Personas:</strong>
+                    <p>{{ reserva.personas }}</p>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Fecha de entrada:</strong>
+                    <p>{{ reserva.fecha_entrada|date:"d/m/Y" }}</p>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Fecha de salida:</strong>
+                    <p>{{ reserva.fecha_salida|date:"d/m/Y" }}</p>
+                </div>
+            </div>
+
+            <hr>
+
+            <h5 class="fw-bold mb-3">Seleccionar unidad disponible</h5>
+
+            {% if unidades %}
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Habitación disponible
+                        </label>
+
+                        <select name="unidad" class="form-select" required>
+                            <option value="">Selecciona una unidad</option>
+
+                            {% for unidad in unidades %}
+                                <option value="{{ unidad.id_unidad }}">
+                                    {{ unidad.nombre_unidad }}
+                                    — {{ unidad.id_habitaciones.nombre }}
+                                    — ${{ unidad.id_habitaciones.precio }} por noche
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-success">
+                        Aprobar y registrar hospedaje
+                    </button>
+                </form>
+            {% else %}
+                <div class="alert alert-warning">
+                    No hay unidades disponibles para el tipo de habitación
+                    y las fechas solicitadas.
+                </div>
+            {% endif %}
+
+            <hr>
+
+            <form method="POST"
+                  action="{% url 'rechazar_reserva_web' reserva.pk %}"
+                  onsubmit="return confirm('¿Deseas rechazar esta solicitud?');">
+                {% csrf_token %}
+
+                <button type="submit" class="btn btn-outline-danger">
+                    Rechazar solicitud
+                </button>
+            </form>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

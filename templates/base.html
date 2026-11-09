@@ -137,6 +137,20 @@
                         <i class="bi bi-building"></i> Hospedaje
                     </a>
                 </li>
+                <!-- NUEVA OPCIÓN -->
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'reservas_web' %}active{% endif %}"
+                    href="{% url 'reservas_web' %}">
+                        <i class="bi bi-calendar-check"></i>
+                        Reservas web
+
+                        {% if reservas_web_pendientes %}
+                            <span class="badge bg-warning text-dark">
+                                {{ reservas_web_pendientes }}
+                            </span>
+                        {% endif %}
+                    </a>
+                </li>
 
                 <li class="nav-item">
                     <a class="nav-link {% if request.resolver_match.url_name == 'formulario_pago' %}active{% endif %}"

@@ -111,7 +111,7 @@
 
             <label>
 
-                Nombre del cliente \\\\\*
+                Nombre del cliente
 
             </label>
 
@@ -211,7 +211,7 @@
 
             <label>
 
-                Tipo de evento \\\\\*
+                Tipo de evento 
 
             </label>
 
@@ -241,7 +241,7 @@
 
             <label>
 
-                Fecha del evento \\\\\*
+                Fecha del evento 
 
             </label>
 
@@ -295,7 +295,7 @@
 
             <label>
 
-                Cantidad de personas \\\\\*
+                Cantidad de personas 
 
             </label>
 
@@ -319,7 +319,7 @@
 
             <label>
 
-                Lugar del evento \\\\\*
+                Lugar del evento
 
             </label>
 
@@ -344,24 +344,6 @@
             </select>
 
         </div>
-
-        <div class="form-group full">
-
-            <label>
-
-                Dirección del evento
-
-            </label>
-
-            <textarea
-
-                id="direccionEvento"
-
-                rows="2"
-
-                placeholder="Dirección completa..."
-
-            ></textarea>
 
         </div>
 
@@ -480,17 +462,34 @@
             <p>Estos servicios forman parte del paquete seleccionado.</p>
         </div>
 
-        <div id="serviciosIncluidos" class="servicios-incluidos"></div>
+        <div id="configuracionPaquete" class="package-configuration" hidden>
 
-        <div class="section-title">
-            <h3>Personalizá tu menú</h3>
-            <p>Seleccioná los platillos permitidos para el paquete.</p>
-        </div>
-
-        <div id="seleccionPlatillos"></div>
+    <div class="section-title">
+        <h3>Incluido en el paquete</h3>
+        <p>Estos servicios forman parte del paquete seleccionado.</p>
     </div>
 
+    <div id="serviciosIncluidos" class="servicios-incluidos"></div>
 
+    <div id="contenedorSubpaquetes" hidden>
+        <div class="section-title">
+            <h3>Selecciona tu menú</h3>
+            <p>Elige la opción correspondiente a tu evento.</p>
+        </div>
+
+        <select id="subpaqueteSeleccionado" class="form-control">
+            <option value="">Selecciona un menú</option>
+        </select>
+    </div>
+
+    <div class="section-title">
+        <h3>Personalizá tu menú</h3>
+        <p>Seleccioná los platillos permitidos para el paquete.</p>
+    </div>
+
+    <div id="seleccionPlatillos"></div>
+
+</div>
 </section>
 
 <!-- =====================================================
@@ -574,13 +573,11 @@
         {% for item in catalogo %}
 
         <article
-
             class="catalog-item"
-
+            data-id="{{ item.id }}"
             data-nombre="{{ item.nombre|lower }}"
-
             data-tipo="{{ item.tipo|escape }}"
-
+            data-grupo="{{ item.grupo }}"
         >
 
             <span class="catalog-category">
@@ -608,13 +605,14 @@
                 type="button"
 
                 onclick="agregarConcepto(
-                    '{{ item.id }}',
-                    '{{ item.nombre|escapejs }}',
-                    '{{ item.tipo|escapejs }}',
-                    '{{ item.precio }}',
-                    '{{ item.unidad|escapejs }}'
-                )"
-
+                '{{ item.id }}',
+                '{{ item.nombre|escapejs }}',
+                '{{ item.tipo|escapejs }}',
+                '{{ item.precio }}',
+                '{{ item.unidad|escapejs }}',
+                '{{ item.grupo|escapejs }}'
+                
+            )"
             >
 
                 + Agregar

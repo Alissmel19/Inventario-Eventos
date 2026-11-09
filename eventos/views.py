@@ -5,10 +5,12 @@ from decimal import Decimal, InvalidOperation
 from django.db.models import Sum, Q
 from collections import Counter
 from decimal import Decimal, InvalidOperation
-
+import os
 from django.shortcuts import render, redirect, get_object_or_404
 
 
+from django.conf import settings
+from reportlab.platypus import Image
 from django.http import JsonResponse
 
 from django.db import transaction
@@ -28,6 +30,29 @@ from .models import HabitacionesUnidades, DetalleHospedaje
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.core.exceptions import ValidationError
+
+from io import BytesIO
+from xml.sax.saxutils import escape
+
+from django.http import HttpResponse
+from django.contrib import messages
+from django.db import transaction
+from django.utils import timezone
+
+from .models import ReservaHabitacionWeb
+
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 
 
@@ -65,7 +90,11 @@ from .models import (
     DetalleHospedaje,
     MetodosPago,
 
-    Cotizaciones, Eventos, Clientes, Pagos
+    Cotizaciones, Eventos, Clientes, 
+    Pagos,
+    SubpaquetesEvento,
+    PaqueteConceptos,
+    SubpaqueteConceptos
 
     
 
@@ -419,81 +448,219 @@ def obtener_eventos_temporales():
 # PAQUETES TEMPORALES
 
 # ============================================================
-
 def obtener_paquetes():
-
-    paquetes_db = (
-
-        PaquetesEvento.objects
-
-        .all()
-
-        .order_by("nombre")
-
-    )
-
     paquetes = []
 
+    paquetes_db = PaquetesEvento.objects.all().order_by("nombre")
+
     for paquete in paquetes_db:
-
-        servicios_db = (
-
-            Servicios.objects
-
-            .filter(id_paquete=paquete.id_paquete, estado=True)
-
-            .order_by("nombre")
-
+        conceptos_db = (
+            PaqueteConceptos.objects
+            .filter(paquete_id=paquete.id_paquete)
+            .select_related(
+                "platillo",
+                "bebida",
+                "servicio",
+                "servicio_opcional",
+                "elemento_montaje",
+                "area",
+            )
         )
 
-        servicios = []
+        conceptos = []
 
-        for servicio in servicios_db:
+        for concepto in conceptos_db:
+            if concepto.platillo_id:
+                conceptos.append({
+                    "id": concepto.platillo_id,
+                    "nombre": concepto.platillo.nombre,
+                    "grupo": "platillo",
+                    "precio": float(
+                        concepto.precio_aplicado
+                        or concepto.platillo.precio
+                        or 0
+                    ),
+                    "cantidad": float(concepto.cantidad or 0),
+                    "obligatorio": concepto.obligatorio,
+                })
 
-            servicios.append({
+            elif concepto.bebida_id:
+                conceptos.append({
+                    "id": concepto.bebida_id,
+                    "nombre": concepto.bebida.nombre,
+                    "grupo": "bebida",
+                    "precio": float(
+                        concepto.precio_aplicado
+                        or concepto.bebida.precio
+                        or 0
+                    ),
+                    "cantidad": float(concepto.cantidad or 0),
+                    "obligatorio": concepto.obligatorio,
+                })
 
-                "id": str(servicio.id_servicio),
+            elif concepto.servicio_id:
+                conceptos.append({
+                    "id": concepto.servicio_id,
+                    "nombre": concepto.servicio.nombre,
+                    "grupo": "servicio",
+                    "precio": float(
+                        concepto.precio_aplicado
+                        or concepto.servicio.precio
+                        or 0
+                    ),
+                    "cantidad": float(concepto.cantidad or 0),
+                    "obligatorio": concepto.obligatorio,
+                })
 
-                "nombre": servicio.nombre,
+            elif concepto.servicio_opcional_id:
+                conceptos.append({
+                    "id": concepto.servicio_opcional_id,
+                    "nombre": concepto.servicio_opcional.nombre,
+                    "grupo": "servicio_opcional",
+                    "precio": float(
+                        concepto.precio_aplicado
+                        or concepto.servicio_opcional.precio
+                        or 0
+                    ),
+                    "cantidad": float(concepto.cantidad or 0),
+                    "obligatorio": concepto.obligatorio,
+                })
 
-                "descripcion": servicio.descripcion or "",
+            elif concepto.elemento_montaje_id:
+                conceptos.append({
+                    "id": concepto.elemento_montaje_id,
+                    "nombre": concepto.elemento_montaje.nombre,
+                    "grupo": "montaje",
+                    "precio": float(
+                        concepto.precio_aplicado
+                        or concepto.elemento_montaje.precio
+                        or 0
+                    ),
+                    "cantidad": float(concepto.cantidad or 0),
+                    "obligatorio": concepto.obligatorio,
+                })
 
-                "precio": float(servicio.precio or 0),
+        subpaquetes = []
 
+        subpaquetes_db = (
+            SubpaquetesEvento.objects
+            .filter(paquete_id=paquete.id_paquete, activo=True)
+            .order_by("nombre")
+        )
+
+        for subpaquete in subpaquetes_db:
+            conceptos_sub = (
+                SubpaqueteConceptos.objects
+                .filter(subpaquete_id=subpaquete.id_subpaquete)
+                .select_related(
+                    "platillo",
+                    "bebida",
+                    "servicio",
+                    "servicio_opcional",
+                    "elemento_montaje",
+                )
+            )
+
+            opciones = []
+
+            for concepto in conceptos_sub:
+                if concepto.platillo_id:
+                    opciones.append({
+                        "id": concepto.platillo_id,
+                        "nombre": concepto.platillo.nombre,
+                        "grupo": "platillo",
+                        "precio": float(
+                            concepto.precio_unitario
+                            or concepto.platillo.precio
+                            or 0
+                        ),
+                        "cantidad": float(concepto.cantidad or 0),
+                        "obligatorio": concepto.obligatorio,
+                        "cortesia": concepto.es_cortesia,
+                    })
+
+                elif concepto.bebida_id:
+                    opciones.append({
+                        "id": concepto.bebida_id,
+                        "nombre": concepto.bebida.nombre,
+                        "grupo": "bebida",
+                        "precio": float(
+                            concepto.precio_unitario
+                            or concepto.bebida.precio
+                            or 0
+                        ),
+                        "cantidad": float(concepto.cantidad or 0),
+                        "obligatorio": concepto.obligatorio,
+                        "cortesia": concepto.es_cortesia,
+                    })
+
+                elif concepto.servicio_id:
+                    opciones.append({
+                        "id": concepto.servicio_id,
+                        "nombre": concepto.servicio.nombre,
+                        "grupo": "servicio",
+                        "precio": float(
+                            concepto.precio_unitario
+                            or concepto.servicio.precio
+                            or 0
+                        ),
+                        "cantidad": float(concepto.cantidad or 0),
+                        "obligatorio": concepto.obligatorio,
+                        "cortesia": concepto.es_cortesia,
+                    })
+
+                elif concepto.servicio_opcional_id:
+                    opciones.append({
+                        "id": concepto.servicio_opcional_id,
+                        "nombre": concepto.servicio_opcional.nombre,
+                        "grupo": "servicio_opcional",
+                        "precio": float(
+                            concepto.precio_unitario
+                            or concepto.servicio_opcional.precio
+                            or 0
+                        ),
+                        "cantidad": float(concepto.cantidad or 0),
+                        "obligatorio": concepto.obligatorio,
+                        "cortesia": concepto.es_cortesia,
+                    })
+
+                elif concepto.elemento_montaje_id:
+                    opciones.append({
+                        "id": concepto.elemento_montaje_id,
+                        "nombre": concepto.elemento_montaje.nombre,
+                        "grupo": "montaje",
+                        "precio": float(
+                            concepto.precio_unitario
+                            or concepto.elemento_montaje.precio
+                            or 0
+                        ),
+                        "cantidad": float(concepto.cantidad or 0),
+                        "obligatorio": concepto.obligatorio,
+                        "cortesia": concepto.es_cortesia,
+                    })
+
+            subpaquetes.append({
+                "id": str(subpaquete.id_subpaquete),
+                "nombre": subpaquete.nombre,
+                "descripcion": subpaquete.descripcion or "",
+                "conceptos": opciones,
             })
 
         paquetes.append({
-
             "id": str(paquete.id_paquete),
-
             "nombre": paquete.nombre,
-
             "subtitulo": paquete.modalidad_pago or "",
-
             "descripcion": paquete.descripcion or "",
-
             "min_personas": paquete.min_personas or 0,
-
             "precio": 0,
-
             "tipo_precio": "consumo",
-
-            "servicios": servicios,
-
+            "conceptos": conceptos,
+            "subpaquetes": subpaquetes,
+            "servicios": [],
             "productos": [],
-
             "montajes": [],
-
             "nota": paquete.que_incluye or "",
-
-            "incluye": [
-
-                servicio["nombre"]
-
-                for servicio in servicios
-
-            ],
-
+            "incluye": [c["nombre"] for c in conceptos],
         })
 
     return paquetes
@@ -744,6 +911,7 @@ def nueva_cotizacion(request):
             
             # Preparar los detalles de la cotización
             subtotal = Decimal("0.00")
+            subtotal_consumo = Decimal("0.00")
             detalles = []
 
             
@@ -769,6 +937,12 @@ def nueva_cotizacion(request):
                     )
                     subtotal += importe
 
+                    # Solo platillos y bebidas generan propina.
+                    tipo_normalizado = tipo.strip().lower()
+
+                    if tipo_normalizado in ("platillo", "bebida"):
+                        subtotal_consumo += importe
+
                 detalles.append({
                     "nombre": nombre[:250],
                     "tipo": tipo,
@@ -779,24 +953,33 @@ def nueva_cotizacion(request):
                 })
 
 
-            # Corporativo y consumo llevan 10 % de propina.
+                        # Corporativo y consumo llevan 10 % de propina
+            # únicamente sobre platillos y bebidas.
             if paquete_id in ("2", "3"):
                 porcentaje_propina = Decimal("10.00")
-            else:
-                porcentaje_propina = Decimal("0.00")
 
-            # Aplicar descuento y calcular propina
-            base = max(subtotal - descuento, Decimal("0.00"))
+                base_propina = max(
+                    subtotal_consumo - descuento,
+                    Decimal("0.00"),
+                )
 
-            if paquete_id in ("2", "3"):
                 monto_propina = (
-                    base * porcentaje_propina / Decimal("100")
+                    base_propina
+                    * porcentaje_propina
+                    / Decimal("100")
                 ).quantize(Decimal("0.01"))
             else:
                 porcentaje_propina = Decimal("0.00")
                 monto_propina = Decimal("0.00")
 
-            total = base + monto_propina            # Guardar todo dentro de una transacción
+            # El descuento se aplica al subtotal general.
+            base = max(
+                subtotal - descuento,
+                Decimal("0.00"),
+            )
+
+            total = base + monto_propina
+           # Guardar todo dentro de una transacción
 
             with transaction.atomic():
 
@@ -1038,6 +1221,13 @@ def nueva_cotizacion(request):
     platillos = Platillo.objects.all().order_by("nombre")
 
     bebidas = Bebidas.objects.all().order_by("nombre")
+    categorias = (
+        Platillo.objects
+        .exclude(categoria__isnull=True)
+        .values_list("categoria__nombre", flat=True)
+        .distinct()
+        .order_by("categoria__nombre")
+    )
 
     servicios = Servicios.objects.filter(
 
@@ -1056,6 +1246,7 @@ def nueva_cotizacion(request):
         catalogo.append({
 
             "id": platillo.pk,
+            "grupo": "platillo",
 
             "nombre": platillo.nombre,
 
@@ -1080,6 +1271,7 @@ def nueva_cotizacion(request):
         catalogo.append({
 
             "id": bebida.pk,
+            "grupo": "bebida",
 
             "nombre": bebida.nombre,
 
@@ -1115,40 +1307,21 @@ def nueva_cotizacion(request):
 
         })
 
+        # Preparar los servicios opcionales
     # Preparar los servicios opcionales
-
     variables = []
 
     for item in servicios_opcionales:
-
         variables.append({
-
             "id": item.pk,
-
             "nombre": item.nombre,
-
-            "descripcion": getattr(item, "descripcion", "") or "",
-
-            "precio": getattr(item, "precio", 0) or 0,
-
-            "unidad": getattr(item, "unidad", None) or "evento",
-
+            "grupo": "servicio",
+            "precio": float(item.precio or 0),
+            "unidad": "evento",
         })
 
-    # Categorías disponibles para el filtro del catálogo
-
-    categorias = sorted({
-
-        item["tipo"] for item in catalogo
-
-    })
-
     # Obtener los paquetes una sola vez
-
     paquetes = obtener_paquetes()
-
-    # Preparar opciones para los select del HTML
-
     lugares = list(
 
         areas.values_list("nombre", flat=True)
@@ -1646,9 +1819,50 @@ def formulario_pago(request):
 
         categoria = "Hospedaje" if es_hospedaje else "Evento"
 
+        pagos_cotizacion = Pagos.objects.filter(
+            cotizacion=cotizacion
+        ).exclude(estado_pago="Rechazado")
+
+        total_registrado = sum(
+            (pago.monto for pago in pagos_cotizacion),
+            Decimal("0.00")
+        )
+
+        total_aprobado = sum(
+            (
+                pago.monto
+                for pago in pagos_cotizacion
+                if pago.estado_pago == "Aprobado"
+            ),
+            Decimal("0.00")
+        )
+
+        total_pendiente_validacion = sum(
+            (
+                pago.monto
+                for pago in pagos_cotizacion
+                if pago.estado_pago == "Pendiente"
+            ),
+            Decimal("0.00")
+        )
+
+        saldo_pendiente = max(
+            Decimal("0.00"),
+            cotizacion.total - total_aprobado
+        )
+
+        monto_disponible_registrar = max(
+            Decimal("0.00"),
+            cotizacion.total - total_registrado
+        )
+
         datos_cotizaciones.append({
             "cotizacion": cotizacion,
             "categoria": categoria,
+            "total_aprobado": total_aprobado,
+            "total_pendiente_validacion": total_pendiente_validacion,
+            "saldo_pendiente": saldo_pendiente,
+            "monto_disponible_registrar": monto_disponible_registrar,
         })
 
     return render(
@@ -1668,12 +1882,55 @@ def formulario_pago(request):
 @require_POST
 def registrar_pago(request):
     ruta = None
+    ruta_dte = None
 
     try:
         cotizacion_id = request.POST.get("cotizacion_id", "").strip()
         metodo_pago_id = request.POST.get("metodo_pago_id", "").strip()
         tipo_pago = request.POST.get("tipo_pago", "Anticipo").strip()
         comprobante = request.FILES.get("comprobante")
+        numero_dte = request.POST.get("numero_dte", "").strip()
+        archivo_dte = request.FILES.get("archivo_dte")
+        if numero_dte and not archivo_dte:
+            return JsonResponse({
+                "ok": False,
+                "error": "Adjunta el archivo correspondiente al DTE."
+            }, status=400)
+
+        if archivo_dte and not numero_dte:
+            return JsonResponse({
+                "ok": False,
+                "error": "Ingresa el número del DTE."
+            }, status=400)
+
+        if archivo_dte:
+            nombre_dte = archivo_dte.name.lower()
+            extensiones_permitidas = (".pdf", ".jpg", ".jpeg", ".png")
+
+            if not nombre_dte.endswith(extensiones_permitidas):
+                return JsonResponse({
+                    "ok": False,
+                    "error": "El DTE debe ser PDF, JPG, JPEG o PNG."
+                }, status=400)
+
+            if archivo_dte.size <= 0 or archivo_dte.size > 5 * 1024 * 1024:
+                return JsonResponse({
+                    "ok": False,
+                    "error": "El archivo DTE debe pesar entre 1 byte y 5 MB."
+                }, status=400)
+
+            inicio_dte = archivo_dte.read(8)
+            archivo_dte.seek(0)
+
+            es_pdf_dte = inicio_dte.startswith(b"%PDF-")
+            es_jpeg_dte = inicio_dte.startswith(b"\xff\xd8\xff")
+            es_png_dte = inicio_dte.startswith(b"\x89PNG\r\n\x1a\n")
+
+            if not (es_pdf_dte or es_jpeg_dte or es_png_dte):
+                return JsonResponse({
+                    "ok": False,
+                    "error": "El contenido del DTE no corresponde a un PDF o imagen válida."
+                }, status=400)
 
         try:
             monto = Decimal(request.POST.get("monto", "0"))
@@ -1781,6 +2038,13 @@ def registrar_pago(request):
                 f"comprobantes/{uuid.uuid4().hex}{nombre[-5:] if nombre.endswith('.jpeg') else nombre[-4:]}",
                 ContentFile(comprobante.read())
             )
+            if archivo_dte:
+                extension_dte = os.path.splitext(archivo_dte.name)[1].lower()
+
+                ruta_dte = default_storage.save(
+                    f"dtes/{uuid.uuid4().hex}{extension_dte}",
+                    ContentFile(archivo_dte.read())
+                )
 
             Pagos.objects.create(
                 evento=evento,
@@ -1791,6 +2055,8 @@ def registrar_pago(request):
                 tipo_pago=tipo_pago,
                 estado_pago="Pendiente",
                 comprobante_url=ruta,
+                numero_dte=numero_dte or None,
+                archivo_dte=ruta_dte,
                 fecha_registro=timezone.now(),
                 observaciones="Pendiente de validación del personal."
             )
@@ -1811,6 +2077,7 @@ def registrar_pago(request):
         if ruta:
             default_storage.delete(ruta)
 
+       
         return JsonResponse({
             "ok": False,
             "error": "La cotización, el método de pago o los datos proporcionados no son válidos."
@@ -1819,6 +2086,10 @@ def registrar_pago(request):
     except Exception:
         if ruta:
             default_storage.delete(ruta)
+
+        if ruta_dte:
+            default_storage.delete(ruta_dte)
+
 
         import logging
         logging.exception("Error al registrar el pago")
@@ -1995,6 +2266,696 @@ def detalle_cotizacion(request, cotizacion_id):
 
 
 
+def pdf_cotizacion(request, cotizacion_id):
+    from io import BytesIO
+    import os
+    from decimal import Decimal
+
+    from django.conf import settings
+    from django.http import HttpResponse
+    from django.shortcuts import get_object_or_404
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import (
+        SimpleDocTemplate,
+        Paragraph,
+        Spacer,
+        Table,
+        TableStyle,
+        Image,
+    )
+    from xml.sax.saxutils import escape
+
+    cotizacion = get_object_or_404(
+        Cotizaciones.objects.select_related(
+            "evento__cliente",
+            "evento__tipo_evento",
+            "evento__area",
+        ),
+        cotizacion_id=cotizacion_id,
+    )
+
+    evento = cotizacion.evento
+
+    if not evento:
+        return HttpResponse(
+            "La cotización no tiene un evento asociado.",
+            status=400,
+        )
+
+    cliente = evento.cliente
+
+    detalles = list(
+        DetalleCotizacion.objects.filter(
+            cotizacion=cotizacion
+        ).order_by("detalle_cotizacion_id")
+    )
+
+    # Recuperar el nombre del paquete guardado en observaciones.
+    observaciones_cotizacion = cotizacion.observaciones or ""
+    paquete_nombre = "Paquete seleccionado"
+    prefijo = "Paquete seleccionado:"
+
+    if prefijo in observaciones_cotizacion:
+        paquete_nombre = (
+            observaciones_cotizacion.split(prefijo, 1)[1]
+            .split(".", 1)[0]
+            .strip()
+        ) or paquete_nombre
+
+    
+    # No mostrar el listado detallado de servicios incluidos.
+    paquete_descripcion = (
+        "Paquete contratado para el evento, "
+        "conforme a la modalidad y condiciones acordadas."
+    )
+    paquete_incluye = ""
+
+    # Pagos relacionados con esta cotización.
+    pagos = list(
+        Pagos.objects.filter(
+            cotizacion=cotizacion
+        ).select_related(
+            "metodo_pago"
+        ).order_by(
+            "fecha_pago",
+            "pago_id",
+        )
+    )
+
+    cero = Decimal("0.00")
+
+    pagos_aprobados = [
+        pago for pago in pagos
+        if (pago.estado_pago or "").strip().lower() == "aprobado"
+    ]
+
+    pagos_pendientes = [
+        pago for pago in pagos
+        if (pago.estado_pago or "").strip().lower() == "pendiente"
+    ]
+
+    pagos_rechazados = [
+        pago for pago in pagos
+        if (pago.estado_pago or "").strip().lower() == "rechazado"
+    ]
+
+    total_pagado = sum(
+        (pago.monto or cero for pago in pagos_aprobados),
+        cero,
+    )
+
+    total_pendiente_validacion = sum(
+        (pago.monto or cero for pago in pagos_pendientes),
+        cero,
+    )
+
+    total_cotizacion = Decimal(str(cotizacion.total or cero))
+    saldo_pendiente = max(cero, total_cotizacion - total_pagado)
+
+    if saldo_pendiente <= cero:
+        estado_financiero = "PAGADO COMPLETAMENTE"
+    elif total_pagado > cero:
+        estado_financiero = "PAGO PARCIAL"
+    else:
+        estado_financiero = "PENDIENTE DE PAGO"
+
+    # Colores sobrios.
+    verde = colors.HexColor("#294C36")
+    negro = colors.HexColor("#20231F")
+    gris = colors.HexColor("#666A64")
+    gris_claro = colors.HexColor("#F3F4F0")
+    borde = colors.HexColor("#D9DDD6")
+    blanco = colors.white
+
+    buffer = BytesIO()
+
+    documento = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=1.65 * cm,
+        leftMargin=1.65 * cm,
+        topMargin=1.25 * cm,
+        bottomMargin=1.4 * cm,
+        title=f"Cotización {cotizacion.numero_cotizacion}",
+        author="BERAKÁ Hotel & Restaurante",
+    )
+
+    estilos = getSampleStyleSheet()
+
+    estilos.add(ParagraphStyle(
+        name="ReporteTitulo",
+        parent=estilos["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=22,
+        leading=25,
+        textColor=verde,
+    ))
+
+    estilos.add(ParagraphStyle(
+        name="ReporteSubtitulo",
+        parent=estilos["Normal"],
+        fontSize=8,
+        leading=11,
+        textColor=gris,
+    ))
+
+    estilos.add(ParagraphStyle(
+        name="ReporteSeccion",
+        parent=estilos["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=10,
+        leading=13,
+        textColor=verde,
+        spaceBefore=12,
+        spaceAfter=6,
+    ))
+
+    estilos.add(ParagraphStyle(
+        name="ReporteTexto",
+        parent=estilos["Normal"],
+        fontSize=8.5,
+        leading=12,
+        textColor=negro,
+        wordWrap="CJK",
+    ))
+
+    estilos.add(ParagraphStyle(
+        name="ReportePequeno",
+        parent=estilos["Normal"],
+        fontSize=7.5,
+        leading=10,
+        textColor=gris,
+    ))
+
+    estilos.add(ParagraphStyle(
+        name="ReporteTotal",
+        parent=estilos["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=13,
+        leading=16,
+        textColor=verde,
+    ))
+
+    estilos.add(ParagraphStyle(
+        name="ReporteDerecha",
+        parent=estilos["ReporteTexto"],
+        alignment=TA_RIGHT,
+    ))
+
+    def texto(valor):
+        return escape(str(valor or "No especificado"))
+
+    def dinero(valor):
+        return f"${Decimal(str(valor or cero)):,.2f}"
+
+    def fecha(valor):
+        return valor.strftime("%d/%m/%Y") if valor else "No especificada"
+
+    def hora(valor):
+        return valor.strftime("%I:%M %p") if valor else "No especificada"
+
+    contenido = []
+
+    # Encabezado con logo a la izquierda.
+    logo_path = os.path.join(
+        settings.BASE_DIR,
+        "static",
+        "img",
+        "logo_beraka.png",
+    )
+
+    marca = []
+
+    if os.path.exists(logo_path):
+        logo = Image(logo_path, width=2.2 * cm, height=2.2 * cm)
+        logo.hAlign = "LEFT"
+        marca.append(logo)
+
+    
+    marca.extend([
+        Paragraph("BERAKÁ", estilos["ReporteTitulo"]),
+        Paragraph(
+            "HOTEL &amp; RESTAURANTE",
+            estilos["ReporteSubtitulo"],
+        ),
+        Paragraph(
+            'Lotificación Germania, Cantón Shucutitan, '
+            'calle principal, polígono "A", lote #9, '
+            'Ataco, El Salvador',
+            ParagraphStyle(
+                "DireccionBeraka",
+                parent=estilos["ReporteSubtitulo"],
+                fontSize=7,
+                leading=9,
+                textColor=colors.HexColor("#20231F"),
+            ),
+        ),
+    ])
+
+
+    datos_reporte = [
+        Paragraph(
+            "<b>COTIZACIÓN</b>",
+            ParagraphStyle(
+                "CotizacionDerecha",
+                parent=estilos["ReporteTexto"],
+                fontName="Helvetica-Bold",
+                fontSize=15,
+                leading=19,
+                alignment=TA_RIGHT,
+                textColor=verde,
+            ),
+        ),
+        Paragraph(
+            f"N.º {texto(cotizacion.numero_cotizacion)}",
+            estilos["ReporteDerecha"],
+        ),
+        Paragraph(
+            f"Emisión: {fecha(cotizacion.fecha)}",
+            estilos["ReporteDerecha"],
+        ),
+    ]
+
+    encabezado = Table(
+        [[marca, datos_reporte]],
+        colWidths=[8.3 * cm, 8.3 * cm],
+    )
+
+    encabezado.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("LINEBELOW", (0, 0), (-1, -1), 1.2, verde),
+    ]))
+
+    contenido.append(encabezado)
+    contenido.append(Spacer(1, 8))
+
+    # Datos del cliente.
+    contenido.append(Paragraph("INFORMACIÓN DEL CLIENTE", estilos["ReporteSeccion"]))
+
+    datos_cliente = [
+        [
+            Paragraph("<b>Cliente</b>", estilos["ReporteTexto"]),
+            Paragraph(texto(cliente.nombre), estilos["ReporteTexto"]),
+            Paragraph("<b>Teléfono</b>", estilos["ReporteTexto"]),
+            Paragraph(texto(cliente.telefono), estilos["ReporteTexto"]),
+        ],
+        [
+            Paragraph("<b>Correo</b>", estilos["ReporteTexto"]),
+            Paragraph(texto(cliente.correo), estilos["ReporteTexto"]),
+            Paragraph("<b>Invitados</b>", estilos["ReporteTexto"]),
+            Paragraph(str(evento.total_invitados or 0), estilos["ReporteTexto"]),
+        ],
+    ]
+
+    tabla_cliente = Table(
+        datos_cliente,
+        colWidths=[2.1 * cm, 6.2 * cm, 2.1 * cm, 6.2 * cm],
+    )
+    tabla_cliente.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("BACKGROUND", (0, 0), (-1, -1), gris_claro),
+        ("LEFTPADDING", (0, 0), (-1, -1), 7),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+        ("TOPPADDING", (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+    ]))
+    contenido.append(tabla_cliente)
+
+    # Datos del evento.
+    contenido.append(Paragraph("INFORMACIÓN DEL EVENTO", estilos["ReporteSeccion"]))
+
+    tipo_evento = (
+        evento.tipo_evento.nombre
+        if evento.tipo_evento else "No especificado"
+    )
+    area_evento = (
+        evento.area.nombre
+        if evento.area else "No especificado"
+    )
+
+    datos_evento = [
+        [
+            Paragraph("<b>Tipo</b>", estilos["ReporteTexto"]),
+            Paragraph(texto(tipo_evento), estilos["ReporteTexto"]),
+            Paragraph("<b>Lugar</b>", estilos["ReporteTexto"]),
+            Paragraph(texto(area_evento), estilos["ReporteTexto"]),
+        ],
+        [
+            Paragraph("<b>Fecha</b>", estilos["ReporteTexto"]),
+            Paragraph(fecha(evento.fecha_evento), estilos["ReporteTexto"]),
+            Paragraph("<b>Horario</b>", estilos["ReporteTexto"]),
+            Paragraph(
+                f"{hora(evento.hora_inicio)} - {hora(evento.hora_fin)}",
+                estilos["ReporteTexto"],
+            ),
+        ],
+    ]
+
+    tabla_evento = Table(
+        datos_evento,
+        colWidths=[2.1 * cm, 6.2 * cm, 2.1 * cm, 6.2 * cm],
+    )
+    tabla_evento.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 7),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LINEBELOW", (0, -1), (-1, -1), 0.5, borde),
+    ]))
+    contenido.append(tabla_evento)
+
+    # Un único cuadro para el paquete seleccionado.
+   
+    # Presentar el paquete de forma general, sin detallar artículos.
+    contenido.append(
+        Paragraph("PAQUETE CONTRATADO", estilos["ReporteSeccion"])
+    )
+
+    texto_paquete = (
+        f"<b>{texto(paquete_nombre)}</b><br/><br/>"
+        "El paquete contratado incluye los alimentos, bebidas, "
+        "servicios y beneficios correspondientes a la modalidad "
+        "seleccionada para el evento. La atención y coordinación "
+        "se realizarán conforme a las condiciones acordadas "
+        "con el cliente. Los servicios o productos adicionales "
+        "no contemplados en el paquete se detallan y cobran "
+        "por separado."
+    )
+
+    tabla_paquete = Table(
+        [[Paragraph(texto_paquete, estilos["ReporteTexto"])]],
+        colWidths=[16.6 * cm],
+    )
+
+    tabla_paquete.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 0.8, verde),
+        ("BACKGROUND", (0, 0), (-1, -1), gris_claro),
+        ("LEFTPADDING", (0, 0), (-1, -1), 10),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+        ("TOPPADDING", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+
+    contenido.append(tabla_paquete)
+
+
+    
+    # Mostrar únicamente conceptos con importe positivo.
+    # Los incluidos en el paquete se guardan con importe cero.
+    
+# Excluir los conceptos marcados como incluidos.
+# Los extras deben identificarse como conceptos adicionales.
+    
+# No desglosar los platos ni servicios incluidos en el paquete.
+# Mostrar únicamente los servicios opcionales cobrados por separado.
+    
+    categorias_platillos = {
+        "desayunos",
+        "sopas",
+        "hamburguesas",
+        "platos fuertes",
+        "plato fuerte premium",
+        "entrada premium",
+        "refrescantes",
+        "jugos",
+        "jugos especiales",
+        "postres",
+        "menu infantil",
+        "menú infantil",
+        "entradas",
+        "plato fuerte",
+    }
+
+    extras = [
+        detalle
+        for detalle in detalles
+        if (detalle.subtotal or cero) > cero
+        and (
+            "servicio opcional" in
+            (detalle.descripcion or "").strip().lower()
+            or (
+                (detalle.descripcion or "").strip().lower()
+                in categorias_platillos
+            )
+        )
+    ]
+
+
+ 
+
+    if extras:
+        contenido.append(Paragraph("SERVICIOS ADICIONALES", estilos["ReporteSeccion"]))
+
+        filas_extras = [[
+            Paragraph("<b>Concepto</b>", estilos["ReportePequeno"]),
+            Paragraph("<b>Cant.</b>", estilos["ReportePequeno"]),
+            Paragraph("<b>Precio unit.</b>", estilos["ReportePequeno"]),
+            Paragraph("<b>Importe</b>", estilos["ReportePequeno"]),
+        ]]
+
+        for detalle in extras:
+            filas_extras.append([
+                Paragraph(texto(detalle.concepto), estilos["ReporteTexto"]),
+                Paragraph(
+                    f"{detalle.cantidad:g} {texto(detalle.unidad)}",
+                    estilos["ReporteTexto"],
+                ),
+                Paragraph(dinero(detalle.precio_unitario), estilos["ReporteDerecha"]),
+                Paragraph(dinero(detalle.subtotal), estilos["ReporteDerecha"]),
+            ])
+
+        tabla_extras = Table(
+            filas_extras,
+            colWidths=[7.3 * cm, 2.7 * cm, 3.2 * cm, 3.4 * cm],
+            repeatRows=1,
+        )
+        tabla_extras.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), gris_claro),
+            ("TEXTCOLOR", (0, 0), (-1, -1), negro),
+            ("LINEBELOW", (0, 0), (-1, 0), 0.8, verde),
+            ("LINEBELOW", (0, 1), (-1, -1), 0.3, borde),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        contenido.append(tabla_extras)
+
+    # Resumen económico.
+    contenido.append(Paragraph("RESUMEN ECONÓMICO", estilos["ReporteSeccion"]))
+
+    filas_resumen = [
+        ["Subtotal", dinero(cotizacion.subtotal)],
+        ["Descuento", f"-{dinero(cotizacion.descuento)}"],
+        [
+            f"Propina ({cotizacion.porcentaje_propina or 0}%)",
+            dinero(cotizacion.monto_propina),
+        ],
+        ["TOTAL DE LA COTIZACIÓN", dinero(total_cotizacion)],
+    ]
+
+    tabla_resumen = Table(
+        [
+            [
+                Paragraph(
+                    f"<b>{texto(etiqueta)}</b>" if indice == 3 else texto(etiqueta),
+                    estilos["ReporteTexto"],
+                ),
+                Paragraph(
+                    f"<b>{importe}</b>" if indice == 3 else importe,
+                    estilos["ReporteDerecha"],
+                ),
+            ]
+            for indice, (etiqueta, importe) in enumerate(filas_resumen)
+        ],
+        colWidths=[10.5 * cm, 6.1 * cm],
+        hAlign="RIGHT",
+    )
+    tabla_resumen.setStyle(TableStyle([
+        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+        ("LINEABOVE", (0, 3), (-1, 3), 1, verde),
+        ("BACKGROUND", (0, 3), (-1, 3), gris_claro),
+        ("TEXTCOLOR", (0, 3), (-1, 3), verde),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+    ]))
+    contenido.append(tabla_resumen)
+
+    # Estado financiero y saldo.
+    contenido.append(Paragraph("REPORTE DE PAGOS", estilos["ReporteSeccion"]))
+
+    resumen_pagos = [
+        [
+            Paragraph("<b>Total de la cotización</b>", estilos["ReporteTexto"]),
+            Paragraph(dinero(total_cotizacion), estilos["ReporteDerecha"]),
+        ],
+        [
+            Paragraph("<b>Total pagado y aprobado</b>", estilos["ReporteTexto"]),
+            Paragraph(dinero(total_pagado), estilos["ReporteDerecha"]),
+        ],
+        [
+            Paragraph("<b>Pagos pendientes de validación</b>", estilos["ReporteTexto"]),
+            Paragraph(dinero(total_pendiente_validacion), estilos["ReporteDerecha"]),
+        ],
+        [
+            Paragraph("<b>Saldo pendiente de pago</b>", estilos["ReporteTexto"]),
+            Paragraph(
+                f"<b>{dinero(saldo_pendiente)}</b>",
+                estilos["ReporteDerecha"],
+            ),
+        ],
+        [
+            Paragraph("<b>Estado financiero</b>", estilos["ReporteTexto"]),
+            Paragraph(f"<b>{estado_financiero}</b>", estilos["ReporteDerecha"]),
+        ],
+    ]
+
+    tabla_pagos_resumen = Table(
+        resumen_pagos,
+        colWidths=[10.5 * cm, 6.1 * cm],
+    )
+    tabla_pagos_resumen.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 0.6, borde),
+        ("LINEBELOW", (0, 0), (-1, -2), 0.3, borde),
+        ("BACKGROUND", (0, 3), (-1, 4), gris_claro),
+        ("TEXTCOLOR", (0, 4), (-1, 4), verde),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("TOPPADDING", (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+    ]))
+    contenido.append(tabla_pagos_resumen)
+
+    # Historial de pagos, incluyendo pendientes y rechazados.
+    contenido.append(Paragraph("DETALLE DEL HISTORIAL DE PAGOS", estilos["ReporteSeccion"]))
+
+    if pagos:
+        filas_historial = [[
+            Paragraph("<b>Fecha</b>", estilos["ReportePequeno"]),
+            Paragraph("<b>Tipo</b>", estilos["ReportePequeno"]),
+            Paragraph("<b>Método</b>", estilos["ReportePequeno"]),
+            Paragraph("<b>Monto</b>", estilos["ReportePequeno"]),
+            Paragraph("<b>Estado</b>", estilos["ReportePequeno"]),
+            Paragraph("<b>N.º de DTE</b>", estilos["ReportePequeno"]),
+        ]]
+
+        for pago in pagos:
+            metodo = (
+                pago.metodo_pago.nombre
+                if pago.metodo_pago else "No especificado"
+            )
+
+            filas_historial.append([
+                Paragraph(fecha(pago.fecha_pago), estilos["ReportePequeno"]),
+                Paragraph(
+                    texto(pago.tipo_pago or "No especificado"),
+                    estilos["ReportePequeno"],
+                ),
+                Paragraph(
+                    texto(metodo),
+                    estilos["ReportePequeno"],
+                ),
+                Paragraph(
+                    dinero(pago.monto),
+                    estilos["ReporteDerecha"],
+                ),
+                Paragraph(
+                    texto(pago.estado_pago or "Pendiente"),
+                    estilos["ReportePequeno"],
+                ),
+                Paragraph(
+                    texto(pago.numero_dte or "Sin DTE"),
+                    estilos["ReportePequeno"],
+                ),
+            ])
+
+        tabla_historial = Table(
+            filas_historial,
+            colWidths=[2.0 * cm, 2.0 * cm, 3.4 * cm, 2.5 * cm, 3.0 * cm, 3.7 * cm],
+            repeatRows=1,
+        )
+        tabla_historial.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), gris_claro),
+            ("LINEBELOW", (0, 0), (-1, 0), 0.8, verde),
+            ("LINEBELOW", (0, 1), (-1, -1), 0.3, borde),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        contenido.append(tabla_historial)
+    else:
+        contenido.append(Paragraph(
+            "No hay pagos registrados para esta cotización.",
+            estilos["ReporteTexto"],
+        ))
+
+    if pagos_rechazados:
+        contenido.append(Spacer(1, 4))
+        contenido.append(Paragraph(
+            f"Nota: hay {len(pagos_rechazados)} pago(s) rechazado(s). "
+            "No se incluyen en el total pagado.",
+            estilos["ReportePequeno"],
+        ))
+
+    # Observaciones del evento.
+    if evento.observaciones:
+        contenido.append(Paragraph("OBSERVACIONES DEL EVENTO", estilos["ReporteSeccion"]))
+        contenido.append(Paragraph(texto(evento.observaciones), estilos["ReporteTexto"]))
+
+    contenido.append(Spacer(1, 14))
+    contenido.append(Paragraph(
+        "Gracias por considerar a BERAKÁ para su evento.",
+        ParagraphStyle(
+            "ReporteCierre",
+            parent=estilos["Normal"],
+            alignment=TA_CENTER,
+            textColor=verde,
+            fontName="Helvetica-Bold",
+            fontSize=9,
+        ),
+    ))
+    contenido.append(Spacer(1, 3))
+    contenido.append(Paragraph(
+        "Reporte generado por el sistema de cotizaciones de BERAKÁ.",
+        ParagraphStyle(
+            "ReportePie",
+            parent=estilos["Normal"],
+            alignment=TA_CENTER,
+            textColor=gris,
+            fontSize=7,
+        ),
+    ))
+
+    documento.build(contenido)
+
+    pdf = buffer.getvalue()
+    buffer.close()
+
+    respuesta = HttpResponse(pdf, content_type="application/pdf")
+    respuesta["Content-Disposition"] = (
+        f'attachment; filename="Cotizacion_{cotizacion.numero_cotizacion}.pdf"'
+    )
+    return respuesta
+
+
 @login_required(login_url="/login/")
 def pagos_cotizacion_json(request, cotizacion_id):
     if not request.user.has_perm("eventos.validar_pagos"):
@@ -2032,6 +2993,13 @@ def pagos_cotizacion_json(request, cotizacion_id):
                     )
                     if pago.comprobante_url else None
                 ),
+                "numero_dte": pago.numero_dte or "",
+                "archivo_dte_url": (
+                    request.build_absolute_uri(
+                        default_storage.url(pago.archivo_dte)
+                    )
+                    if pago.archivo_dte else None
+                ),
             })
 
         return JsonResponse({
@@ -2041,6 +3009,7 @@ def pagos_cotizacion_json(request, cotizacion_id):
         })
 
     except Cotizaciones.DoesNotExist:
+
         return JsonResponse(
             {"ok": False, "error": "La cotización no existe."},
             status=404
@@ -2110,3 +3079,304 @@ def validar_pago(request, pago_id):
         }, status=404)
 
     
+@login_required(login_url="/login/")
+@require_POST
+def subir_dte_pago(request, pago_id):
+    if not request.user.has_perm("eventos.validar_pagos"):
+        return JsonResponse({
+            "ok": False,
+            "error": "No tienes permiso para subir DTE."
+        }, status=403)
+
+    numero_dte = request.POST.get("numero_dte", "").strip()
+    archivo_dte = request.FILES.get("archivo_dte")
+
+    if not numero_dte:
+        return JsonResponse({
+            "ok": False,
+            "error": "Ingresa el número del DTE."
+        }, status=400)
+
+    if not archivo_dte:
+        return JsonResponse({
+            "ok": False,
+            "error": "Selecciona el archivo del DTE."
+        }, status=400)
+
+    nombre = archivo_dte.name.lower()
+    extensiones = (".pdf", ".jpg", ".jpeg", ".png")
+
+    if not nombre.endswith(extensiones):
+        return JsonResponse({
+            "ok": False,
+            "error": "El DTE debe ser PDF, JPG, JPEG o PNG."
+        }, status=400)
+
+    if archivo_dte.size <= 0 or archivo_dte.size > 5 * 1024 * 1024:
+        return JsonResponse({
+            "ok": False,
+            "error": "El archivo debe pesar entre 1 byte y 5 MB."
+        }, status=400)
+
+    inicio = archivo_dte.read(8)
+    archivo_dte.seek(0)
+
+    valido = (
+        inicio.startswith(b"%PDF-")
+        or inicio.startswith(b"\xff\xd8\xff")
+        or inicio.startswith(b"\x89PNG\r\n\x1a\n")
+    )
+
+    if not valido:
+        return JsonResponse({
+            "ok": False,
+            "error": "El contenido no corresponde a un PDF o imagen válida."
+        }, status=400)
+
+    try:
+        pago = Pagos.objects.get(pago_id=pago_id)
+    except Pagos.DoesNotExist:
+        return JsonResponse({
+            "ok": False,
+            "error": "No se encontró el pago."
+        }, status=404)
+
+    extension = os.path.splitext(nombre)[1]
+    ruta_nueva = default_storage.save(
+        f"dtes/{uuid.uuid4().hex}{extension}",
+        ContentFile(archivo_dte.read())
+    )
+
+    ruta_anterior = pago.archivo_dte
+
+    try:
+        pago.numero_dte = numero_dte
+        pago.archivo_dte = ruta_nueva
+        pago.save(update_fields=["numero_dte", "archivo_dte"])
+    except Exception:
+        default_storage.delete(ruta_nueva)
+        raise
+
+    if ruta_anterior and ruta_anterior != ruta_nueva:
+        default_storage.delete(ruta_anterior)
+
+    return JsonResponse({
+        "ok": True,
+        "mensaje": "DTE guardado correctamente."
+    })
+
+
+
+# ============================================================
+# RESERVAS WEB
+# ============================================================
+
+@login_required(login_url="login")
+def reservas_web(request):
+    reservas = ReservaHabitacionWeb.objects.all().order_by("-creado")
+
+    pendientes = reservas.filter(estado="Pendiente").count()
+
+    return render(request, "reservas_web.html", {
+        "reservas": reservas,
+        "pendientes": pendientes,
+    })
+
+
+@login_required(login_url="login")
+def detalle_reserva_web(request, reserva_id):
+    reserva = get_object_or_404(
+        ReservaHabitacionWeb,
+        pk=reserva_id
+    )
+
+    # Identificar el tipo solicitado.
+    tipo = (
+        reserva.tipo_habitacion
+        .lower()
+        .replace("habitación", "")
+        .replace("habitacion", "")
+        .strip()
+    )
+
+    unidades = HabitacionesUnidades.objects.filter(
+        activa=True,
+        id_habitaciones__nombre__icontains=tipo,
+    ).select_related("id_habitaciones")
+
+    # Solo mostrar unidades disponibles para las fechas solicitadas.
+    ocupadas = DetalleHospedaje.objects.filter(
+        fecha_check_in__lt=reserva.fecha_salida,
+        fecha_check_out__gt=reserva.fecha_entrada,
+        id_hospedaje__cotizacion__estado="Aceptada",
+    ).values_list("id_unidad_id", flat=True)
+
+    unidades = unidades.exclude(id_unidad__in=ocupadas).filter(
+    Q(id_habitaciones__capacidad__gte=reserva.personas)
+    | Q(id_habitaciones__capacidad__isnull=True)
+)
+
+    if request.method == "POST":
+        if reserva.estado != "Pendiente":
+            messages.error(request, "Esta solicitud ya fue procesada.")
+            return redirect("reservas_web")
+
+        unidad_id = request.POST.get("unidad")
+
+        if not unidad_id:
+            messages.error(request, "Selecciona una unidad disponible.")
+            return redirect("detalle_reserva_web", reserva_id=reserva.pk)
+
+        try:
+            with transaction.atomic():
+                # Bloquear solicitud y unidad durante la aprobación.
+                reserva = ReservaHabitacionWeb.objects.select_for_update().get(
+                    pk=reserva.pk
+                )
+
+                if reserva.estado != "Pendiente":
+                    messages.error(
+                        request,
+                        "Esta solicitud ya fue procesada."
+                    )
+                    return redirect("reservas_web")
+
+                unidad = HabitacionesUnidades.objects.select_for_update().select_related(
+                    "id_habitaciones"
+                ).get(
+                    id_unidad=unidad_id,
+                    activa=True,
+                    id_habitaciones__nombre__icontains=tipo,
+                )
+
+                if (
+                    unidad.id_habitaciones.capacidad
+                    and unidad.id_habitaciones.capacidad < reserva.personas
+                ):
+                    messages.error(
+                        request,
+                        "La capacidad de esta habitación es insuficiente."
+                    )
+                    return redirect(
+                        "detalle_reserva_web",
+                        reserva_id=reserva.pk
+                    )
+
+                # Comprobar nuevamente que la unidad siga disponible.
+                ya_ocupada = DetalleHospedaje.objects.filter(
+                    id_unidad=unidad,
+                    fecha_check_in__lt=reserva.fecha_salida,
+                    fecha_check_out__gt=reserva.fecha_entrada,
+                    id_hospedaje__cotizacion__estado="Aceptada",
+                ).exists()
+
+                if ya_ocupada:
+                    messages.error(
+                        request,
+                        "La habitación ya fue reservada para esas fechas."
+                    )
+                    return redirect(
+                        "detalle_reserva_web",
+                        reserva_id=reserva.pk
+                    )
+
+                noches = (
+                    reserva.fecha_salida - reserva.fecha_entrada
+                ).days
+
+                precio = Decimal(
+                    str(unidad.id_habitaciones.precio or 0)
+                )
+
+                subtotal = precio * noches
+                ahora = timezone.now()
+
+                cliente = Clientes.objects.create(
+                    nombre=reserva.nombre,
+                    telefono=reserva.telefono,
+                    correo=None,
+                    fecha_registro=ahora,
+                )
+
+                numero = (
+                    f"HOS-{ahora:%Y%m%d}-"
+                    f"{uuid.uuid4().hex[:8].upper()}"
+                )
+
+                cotizacion = Cotizaciones.objects.create(
+                    evento=None,
+                    numero_cotizacion=numero,
+                    fecha=ahora.date(),
+                    subtotal=subtotal,
+                    porcentaje_propina=Decimal("0.00"),
+                    monto_propina=Decimal("0.00"),
+                    descuento=Decimal("0.00"),
+                    total=subtotal,
+                    estado="Aceptada",
+                    observaciones=(
+                        f"Reserva recibida desde el sitio web. "
+                        f"Solicitud #{reserva.pk}. "
+                        f"Entrada: {reserva.fecha_entrada}; "
+                        f"salida: {reserva.fecha_salida}; "
+                        f"personas: {reserva.personas}."
+                    ),
+                    fecha_creacion=ahora,
+                )
+
+                hospedaje = Hospedaje.objects.create(
+                    total=subtotal,
+                    fecha=ahora,
+                    cliente=cliente,
+                    cotizacion=cotizacion,
+                )
+
+                DetalleHospedaje.objects.create(
+                    id_hospedaje=hospedaje,
+                    id_habitaciones=unidad.id_habitaciones,
+                    id_unidad=unidad,
+                    fecha_check_in=reserva.fecha_entrada,
+                    fecha_check_out=reserva.fecha_salida,
+                )
+
+                reserva.estado = "Aprobada"
+                reserva.save(update_fields=["estado"])
+
+            messages.success(
+                request,
+                f"Reserva aprobada. Cotización: {numero}"
+            )
+            return redirect("reservas_web")
+
+        except HabitacionesUnidades.DoesNotExist:
+            messages.error(
+                request,
+                "La unidad seleccionada no existe o no corresponde al tipo solicitado."
+            )
+        except Exception as e:
+            messages.error(
+                request,
+                f"No se pudo aprobar la reserva: {str(e)}"
+            )
+
+    return render(request, "detalle_reserva_web.html", {
+        "reserva": reserva,
+        "unidades": unidades,
+    })
+
+
+@login_required(login_url="login")
+@require_POST
+def rechazar_reserva_web(request, reserva_id):
+    reserva = get_object_or_404(
+        ReservaHabitacionWeb,
+        pk=reserva_id
+    )
+
+    if reserva.estado == "Pendiente":
+        reserva.estado = "Rechazada"
+        reserva.save(update_fields=["estado"])
+        messages.success(request, "La solicitud fue rechazada.")
+    else:
+        messages.warning(request, "La solicitud ya fue procesada.")
+
+    return redirect("reservas_web")

@@ -31,4 +31,29 @@ urlpatterns = [
         views.logout_view,
         name="logout"
     ),
+    
+    path(
+        "cotizaciones/<int:cotizacion_id>/pdf/",
+        views.pdf_cotizacion,
+        name="pdf_cotizacion",
+    ),
+
+    path(
+    "reservas-web/",
+    views.reservas_web,
+    name="reservas_web"
+    ),
+
+    path(
+        "reservas-web/<int:reserva_id>/",
+        views.detalle_reserva_web,
+        name="detalle_reserva_web"
+    ),
+
+    path(
+        "reservas-web/<int:reserva_id>/rechazar/",
+        views.rechazar_reserva_web,
+        name="rechazar_reserva_web"
+    ),
+
 ]

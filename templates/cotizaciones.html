@@ -658,8 +658,13 @@
 
                                 <th>Comprobante</th>
 
+                                <th>Número de DTE</th>
+
+                                <th>DTE</th>
+
                                 <th>Acciones</th>
 
+                             
                             </tr>
 
                         </thead>
@@ -671,6 +676,8 @@
                 </div>
 
             </div>
+            
+            
 
             <div class="modal-footer">
 
@@ -788,6 +795,33 @@ async function cargarPagos(boton) {
 
             fila.appendChild(celdaComprobante);
 
+            // Columna: Número de DTE
+            const celdaNumeroDte = document.createElement("td");
+            celdaNumeroDte.textContent = pago.numero_dte || "Sin DTE";
+            fila.appendChild(celdaNumeroDte);
+
+            // Columna: Archivo DTE
+            const celdaDte = document.createElement("td");
+
+            if (pago.archivo_dte_url) {
+                const enlaceDte = document.createElement("a");
+                enlaceDte.href = pago.archivo_dte_url;
+                enlaceDte.target = "_blank";
+                enlaceDte.rel = "noopener noreferrer";
+                enlaceDte.textContent = "Ver DTE";
+                enlaceDte.className = "link-cotizacion";
+                celdaDte.appendChild(enlaceDte);
+            } else {
+                const subirDte = document.createElement("button");
+                subirDte.type = "button";
+                subirDte.textContent = "Subir DTE";
+                subirDte.className = "btn-guardar";
+                subirDte.addEventListener("click", () => seleccionarDte(pago.pago_id));
+                celdaDte.appendChild(subirDte);
+            }
+
+            fila.appendChild(celdaDte);
+
             const celdaAcciones = document.createElement("td");
 
             if (pago.estado_pago === "Pendiente") {
@@ -820,9 +854,13 @@ async function cargarPagos(boton) {
 
             } else {
 
-                celdaAcciones.textContent = "Sin acciones";
-
+                const estado = document.createElement("span");
+                estado.className = "text-muted";
+                estado.textContent = pago.estado_pago || "Sin acciones";
+                celdaAcciones.appendChild(estado);
             }
+
+            
 
             fila.appendChild(celdaAcciones);
 
@@ -840,8 +878,80 @@ async function cargarPagos(boton) {
 
 }
 
-async function procesarValidacion(pagoId, decision) {
 
+
+async function seleccionarDte(pagoId) {
+    const numeroDte = prompt("Ingresa el número del DTE:");
+
+    if (numeroDte === null) return;
+
+    if (!numeroDte.trim()) {
+        alert("Debes ingresar el número del DTE.");
+        return;
+    }
+
+    const csrfInput = document.querySelector(
+        '#formValidarPago input[name="csrfmiddlewaretoken"]'
+    );
+
+    if (!csrfInput) {
+        alert("No se encontró el token de seguridad. Recarga la página.");
+        return;
+    }
+
+    const inputArchivo = document.createElement("input");
+    inputArchivo.type = "file";
+    inputArchivo.accept = ".pdf,.jpg,.jpeg,.png";
+
+    inputArchivo.addEventListener("change", async function () {
+        const archivo = inputArchivo.files[0];
+
+        if (!archivo) return;
+
+        if (archivo.size > 5 * 1024 * 1024) {
+            alert("El archivo no puede superar los 5 MB.");
+            return;
+        }
+
+        const datos = new FormData();
+        datos.append("numero_dte", numeroDte.trim());
+        datos.append("archivo_dte", archivo);
+
+        try {
+            const respuesta = await fetch(`/pagos/${pagoId}/dte/`, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrfInput.value,
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: datos
+            });
+
+            const resultado = await respuesta.json();
+
+            if (!respuesta.ok || !resultado.ok) {
+                throw new Error(
+                    resultado.error || "No se pudo guardar el DTE."
+                );
+            }
+
+            alert("¡DTE guardado correctamente!");
+
+            if (botonCotizacionActual) {
+                await cargarPagos(botonCotizacionActual);
+            }
+
+        } catch (error) {
+            alert(error.message);
+        }
+    });
+
+    inputArchivo.click();
+}
+
+
+async function procesarValidacion(pagoId, decision) {
+    
     let observacion = "";
 
     if (decision === "Rechazado") {

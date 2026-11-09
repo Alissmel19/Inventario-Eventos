@@ -235,6 +235,14 @@
                 🖨️ Imprimir / Guardar PDF
             </button>
 
+            
+            <a href="{% url 'pdf_cotizacion' cotizacion.cotizacion_id %}"
+            class="btn-accion"
+            style="background:#294c36; color:white; text-decoration:none;">
+                Descargar cotización PDF
+            </a>
+
+
             <a href="{% url 'lista_cotizaciones' %}" class="btn-volver">
                 ← Volver a cotizaciones
             </a>
