@@ -1,4 +1,3 @@
-
 "use strict";
 
 /* =========================================================
@@ -7,6 +6,7 @@
 
 let conceptos = [];
 let paqueteSeleccionado = null;
+let subpaqueteSeleccionadoId = "";
 
 const paquetes = window.PAQUETES_BERAKA || {};
 
@@ -32,12 +32,10 @@ function obtenerRadioPaquete(id) {
     ).find(radio => String(radio.value) === String(id));
 }
 
-
 function obtenerPaqueteActual(id) {
     const radio = obtenerRadioPaquete(id);
     const tarjeta = radio?.closest(".package-option");
 
-    // paquetes_json llega como una lista desde Django.
     const configurado = Array.isArray(paquetes)
         ? paquetes.find(p => String(p.id) === String(id)) || {}
         : paquetes[String(id)] || {};
@@ -57,7 +55,6 @@ function obtenerPaqueteActual(id) {
     };
 }
 
-
 function nombrePaqueteActual() {
     if (!paqueteSeleccionado) return "";
 
@@ -74,11 +71,13 @@ function esPaqueteEstandar() {
 }
 
 function llevaPropina() {
-    const nombre = nombrePaqueteActual();
-
-    return nombre.includes("consumo") ||
-           nombre.includes("corporativo");
+    return true;
 }
+
+/* =========================================================
+   CONCEPTOS INCLUIDOS
+========================================================= */
+
 function convertirConceptoIncluido(item, esSubpaquete = false) {
     const grupo = String(item.grupo || "").toLowerCase();
 
@@ -106,7 +105,10 @@ function convertirConceptoIncluido(item, esSubpaquete = false) {
         incluido: true,
         obligatorio: Boolean(item.obligatorio),
         cortesia: Boolean(item.cortesia),
-        esSubpaquete: esSubpaquete
+        esSubpaquete: esSubpaquete,
+        subpaquete_id: esSubpaquete
+            ? String(subpaqueteSeleccionadoId)
+            : ""
     };
 }
 
@@ -117,6 +119,10 @@ function cargarConceptosIncluidos(lista) {
         conceptos.push(convertirConceptoIncluido(item));
     });
 }
+
+/* =========================================================
+   SELECTOR DE MODALIDADES / SUBPAQUETES
+========================================================= */
 
 function cargarSelectorSubpaquetes(paquete) {
     const contenedor = document.getElementById("contenedorSubpaquetes");
@@ -151,35 +157,30 @@ function cargarSelectorSubpaquetes(paquete) {
 }
 
 function seleccionarSubpaquete(id) {
-    if (!paqueteSeleccionado || !id) return;
 
-    const paquete = obtenerPaqueteActual(paqueteSeleccionado);
+    subpaqueteSeleccionadoId = String(id || "");
 
-    const subpaquete = (paquete.subpaquetes || []).find(
-        item => String(item.id) === String(id)
-    );
+    // Limpiar búsqueda anterior.
+    const busqueda = document.getElementById("buscarConcepto");
 
-    if (!subpaquete) return;
+    if (busqueda) {
+        busqueda.value = "";
+    }
 
-    // Quitar únicamente los conceptos del subpaquete anterior.
-    conceptos = conceptos.filter(item => !item.esSubpaquete);
-
-    // Agregar los conceptos del subpaquete seleccionado.
-    const nuevos = (subpaquete.conceptos || []).map(item =>
-        convertirConceptoIncluido(item, true)
-    );
-
-    conceptos.push(...nuevos);
+    // Actualizar el catálogo con la modalidad elegida.
+    filtrarCatalogo();
 
     renderizarConceptos();
-    calcularTotales();
 }
-
+/* =========================================================
+   SELECCIONAR PAQUETE
+========================================================= */
 
 function seleccionarPaquete(id) {
     id = String(id);
 
     const radioActual = obtenerRadioPaquete(id);
+
     if (!radioActual) return;
 
     if (
@@ -188,13 +189,15 @@ function seleccionarPaquete(id) {
         conceptos.length > 0
     ) {
         const continuar = confirm(
-            "Cambiar de paquete actualizará los incluidos y eliminará " +
-            "los conceptos seleccionados. ¿Deseas continuar?"
+            "Cambiar de paquete actualizará los conceptos incluidos " +
+            "y eliminará los conceptos seleccionados. ¿Deseas continuar?"
         );
 
         if (!continuar) {
             const anterior = obtenerRadioPaquete(paqueteSeleccionado);
+
             if (anterior) anterior.checked = true;
+
             radioActual.checked = false;
             return;
         }
@@ -205,7 +208,6 @@ function seleccionarPaquete(id) {
 
     const paquete = obtenerPaqueteActual(id);
 
-    // Información del paquete.
     const info = document.getElementById("packageInfo");
 
     if (info) {
@@ -220,34 +222,28 @@ function seleccionarPaquete(id) {
         info.append(titulo, descripcion);
     }
 
-    // Reiniciar conceptos.
     conceptos = [];
 
-    // Cargar conceptos generales del paquete.
-    cargarConceptosIncluidos(paquete.conceptos || []);
+    cargarConceptosIncluidos(
+        (paquete.conceptos || []).filter(
+            item => item.obligatorio === true
+        )
+    );
 
-    // Cargar selector de subpaquetes.
+    subpaqueteSeleccionadoId = "";
+
     cargarSelectorSubpaquetes(paquete);
 
     const selector = document.getElementById("subpaqueteSeleccionado");
-    if (selector) selector.value = "";
 
-    // Mostrar configuración.
+    if (selector) {
+        selector.value = "";
+    }
+
     const configuracion = document.getElementById("configuracionPaquete");
-    if (configuracion) configuracion.hidden = false;
 
-    // Mostrar conceptos incluidos.
-    const listaServicios = document.getElementById("serviciosIncluidos");
-
-    if (listaServicios) {
-        listaServicios.replaceChildren();
-
-        conceptos.forEach(concepto => {
-            const elemento = document.createElement("div");
-            elemento.className = "servicio-incluido";
-            elemento.textContent = concepto.nombre;
-            listaServicios.appendChild(elemento);
-        });
+    if (configuracion) {
+        configuracion.hidden = false;
     }
 
     const busqueda = document.getElementById("buscarConcepto");
@@ -257,51 +253,60 @@ function seleccionarPaquete(id) {
     if (categoria) categoria.value = "todas";
 
     actualizarVisibilidadPropina();
+
     filtrarCatalogo();
     filtrarServicios();
     renderizarConceptos();
     calcularTotales();
 }
+
 /* =========================================================
    CATÁLOGO Y FILTROS
 ========================================================= */
 
-function esPremium(elemento) {
-    const tipo = (elemento.dataset.tipo || "").toLowerCase();
-    const nombre = (elemento.dataset.nombre || "").toLowerCase();
-
-    return tipo.includes("premium") ||
-           nombre.includes("premium");
+function normalizarFiltro(valor) {
+    return String(valor || "")
+        .toLocaleLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
 }
-
-function esPlatilloEstandar(elemento) {
-    const tipo = (elemento.dataset.tipo || "")
-        .trim()
-        .toLowerCase();
-
-    return tipo.includes("plato estandard") ||
-           tipo.includes("plato estándar") ||
-           tipo.includes("plato standard") ||
-           tipo.includes("plato estandar");
-}
-
 
 
 function filtrarCatalogo() {
-    const texto = (
+    const texto = normalizarFiltro(
         document.getElementById("buscarConcepto")?.value || ""
-    ).toLowerCase().trim();
-
-    const categoria = (
-        document.getElementById("categoryFilter")?.value || "todas"
-    ).toLowerCase().trim();
-
-    // IDs de los conceptos incluidos en el paquete seleccionado.
-    const incluidos = new Set(
-        conceptos
-            .filter(c => c.incluido)
-            .map(c => `${String(c.grupo).toLowerCase()}-${String(c.catalogo_id)}`)
     );
+
+    const paquete = paqueteSeleccionado
+        ? obtenerPaqueteActual(paqueteSeleccionado)
+        : null;
+
+    const subpaquetes = paquete?.subpaquetes || [];
+
+    const subpaqueteActivo = subpaquetes.find(
+        sub => String(sub.id) === String(subpaqueteSeleccionadoId)
+    );
+
+    const mostrarTodo = document.getElementById(
+        "mostrarMenuCompleto"
+    )?.checked || false;
+
+    // Obtener únicamente los platillos de la modalidad seleccionada.
+    const conceptosModalidad = subpaqueteActivo?.conceptos || [];
+
+    const platillosModalidad = conceptosModalidad.filter(
+        concepto =>
+            normalizarFiltro(concepto.grupo) === "platillo"
+    );
+
+    const idsPermitidos = new Set(
+        platillosModalidad.map(concepto => String(concepto.id))
+    );
+
+    // Aplicar filtro especial solamente cuando la modalidad
+    // tiene platillos realmente relacionados en la base de datos.
+    const aplicarFiltroModalidad = idsPermitidos.size > 0;
 
     const elementos = Array.from(
         document.querySelectorAll(".catalog-item")
@@ -310,47 +315,63 @@ function filtrarCatalogo() {
     let visibles = 0;
 
     elementos.forEach(item => {
-        const nombre = (item.dataset.nombre || "").toLowerCase().trim();
-        const tipo = (item.dataset.tipo || "").toLowerCase().trim();
-        const grupo = (item.dataset.grupo || "").toLowerCase().trim();
         const id = String(item.dataset.id || "");
+        const grupo = normalizarFiltro(item.dataset.grupo);
+        const nombre = normalizarFiltro(item.dataset.nombre);
 
-        // Comprobar si pertenece al paquete seleccionado.
-        const esIncluido = incluidos.has(`${grupo}-${id}`);
+        const esPlatillo = grupo === "platillo";
 
-        const coincideTexto = !texto || nombre.includes(texto);
-        const coincideCategoria =
-            categoria === "todas" || tipo === categoria;
+        const perteneceModalidad =
+            esPlatillo && idsPermitidos.has(id);
 
-        const visible = coincideTexto && coincideCategoria;
+        const coincideBusqueda =
+            texto.length > 0 && nombre.includes(texto);
+
+        let visible;
+
+        if (mostrarTodo || coincideBusqueda) {
+            // Mostrar todo al solicitarlo o al buscar.
+            visible = true;
+        } else if (aplicarFiltroModalidad) {
+            // Premium: mostrar inicialmente sus platos fuertes.
+            visible = perteneceModalidad;
+        } else {
+            // Los demás paquetes muestran todo el catálogo.
+            visible = true;
+        }
 
         item.style.display = visible ? "" : "none";
-        item.classList.toggle("concepto-incluido", esIncluido);
 
-        const boton = item.querySelector("button");
-        if (boton) boton.disabled = !visible;
+        item.classList.toggle(
+            "platillo-modalidad",
+            perteneceModalidad
+        );
 
         if (visible) visibles++;
     });
 
-    // El contenedor correcto de tu HTML es .catalog-grid.
+    // Ordenar los platos de la modalidad al principio.
     const catalogo = document.querySelector(".catalog-grid");
 
-    if (catalogo) {
-        const ordenados = [...elementos].sort((a, b) => {
-            const aIncluido = a.classList.contains("concepto-incluido");
-            const bIncluido = b.classList.contains("concepto-incluido");
+    if (catalogo && aplicarFiltroModalidad) {
+        elementos.sort((a, b) => {
+            const prioridadA =
+                a.classList.contains("platillo-modalidad") ? 1 : 0;
 
-            return Number(bIncluido) - Number(aIncluido);
+            const prioridadB =
+                b.classList.contains("platillo-modalidad") ? 1 : 0;
+
+            return prioridadB - prioridadA;
         });
 
-        ordenados.forEach(item => catalogo.appendChild(item));
+        elementos.forEach(item => catalogo.appendChild(item));
     }
 
     const empty = document.getElementById("catalogEmpty");
 
+
     if (empty) {
-        empty.style.display = visibles ? "none" : "block";
+        empty.style.display = visibles === 0 ? "block" : "none";
     }
 }
 
@@ -359,7 +380,6 @@ window.filtrarCatalogo = filtrarCatalogo;
 /* =========================================================
    SERVICIOS OPCIONALES
 ========================================================= */
-
 
 function filtrarServicios() {
     const paqueteId = String(paqueteSeleccionado || "");
@@ -371,7 +391,6 @@ function filtrarServicios() {
 
         const boton = elemento.querySelector("button");
 
-        // En eventos por consumo no se permite contratar DJ ni bocinas.
         const restringido =
             paqueteId === "3" &&
             (
@@ -387,10 +406,11 @@ function filtrarServicios() {
     });
 }
 
-
 /* =========================================================
-   AGREGAR CONCEPTOS
+   AGREGAR CONCEPTOS DEL CATÁLOGO
 ========================================================= */
+
+
 function agregarConcepto(id, nombre, tipo, precio, unidad, grupo = "") {
     if (!paqueteSeleccionado) {
         alert("Primero selecciona un paquete.");
@@ -405,24 +425,62 @@ function agregarConcepto(id, nombre, tipo, precio, unidad, grupo = "") {
         return;
     }
 
-    const personas = obtenerPersonas();
+    const grupoNormalizado = String(grupo || "").toLowerCase();
+
+    const conceptoCoincidente = conceptos.find(concepto =>
+        String(concepto.grupo || "").toLowerCase() === grupoNormalizado &&
+        String(concepto.catalogo_id) === String(id)
+    );
+
+    if (conceptoCoincidente) {
+        if (conceptoCoincidente.incluido === true) {
+            conceptoCoincidente.nombre = String(nombre);
+            conceptoCoincidente.tipo = String(tipo || "");
+            conceptoCoincidente.precio = precioNumero;
+            conceptoCoincidente.unidad = unidadNormalizada;
+            conceptoCoincidente.cantidad = unidadNormalizada === "persona"
+                ? obtenerPersonas()
+                : 1;
+            conceptoCoincidente.incluido = false;
+            conceptoCoincidente.subpaquete_id = String(
+                subpaqueteSeleccionadoId || ""
+            );
+
+            renderizarConceptos();
+            filtrarCatalogo();
+            calcularTotales();
+            return;
+        }
+
+        alert("Este concepto ya está agregado a la cotización.");
+        return;
+    }
 
     conceptos.push({
         catalogo_id: Number(id),
         nombre: String(nombre),
         tipo: String(tipo || ""),
         grupo: String(grupo || ""),
+        subpaquete_id: String(subpaqueteSeleccionadoId || ""),
         precio: precioNumero,
         unidad: unidadNormalizada,
-        cantidad: unidadNormalizada === "persona" ? personas : 1,
-        incluido: false
+        cantidad: unidadNormalizada === "persona"
+            ? obtenerPersonas()
+            : 1,
+        incluido: false,
+        esSubpaquete: false
     });
 
     renderizarConceptos();
+    filtrarCatalogo();
     calcularTotales();
 }
 
-window.agregarConcepto = agregarConcepto;
+
+/* =========================================================
+   AGREGAR SERVICIOS OPCIONALES
+========================================================= */
+
 function agregarVariable(id, nombre, precio, unidad) {
     if (!paqueteSeleccionado) {
         alert("Primero selecciona un paquete.");
@@ -438,17 +496,32 @@ function agregarVariable(id, nombre, precio, unidad) {
 
     const personas = obtenerPersonas();
 
+    const yaExiste = conceptos.some(concepto =>
+        String(concepto.catalogo_id) === String(id) &&
+        concepto.grupo === "servicio_opcional"
+    );
+
+    if (yaExiste) {
+        alert("Este servicio ya está agregado.");
+        return;
+    }
+
     conceptos.push({
         catalogo_id: Number(id),
         nombre: String(nombre),
         tipo: "Servicio opcional",
         precio: precioNumero,
         unidad: String(unidad || "evento"),
-        cantidad: unidad === "persona" ? personas : 1
+        cantidad: unidad === "persona" ? personas : 1,
+        grupo: "servicio_opcional",
+        incluido: false
     });
 
     renderizarConceptos();
+    calcularTotales();
 }
+
+window.agregarVariable = agregarVariable;
 
 /* =========================================================
    EDITAR Y ELIMINAR CONCEPTOS
@@ -466,6 +539,7 @@ function cambiarPrecio(index, valor) {
     }
 
     conceptos[index].precio = precio;
+
     renderizarConceptos();
 }
 
@@ -481,21 +555,19 @@ function cambiarCantidad(index, valor) {
     }
 
     conceptos[index].cantidad = cantidad;
+
     renderizarConceptos();
 }
-
 
 function eliminarConcepto(index) {
-    const concepto = conceptos[index];
-
-    if (!concepto || concepto.incluido) {
-        return;
-    }
+    if (!conceptos[index]) return;
 
     conceptos.splice(index, 1);
-    renderizarConceptos();
-}
 
+    renderizarConceptos();
+    filtrarCatalogo();
+    calcularTotales();
+}
 
 function actualizarPersonas() {
     const personas = obtenerPersonas();
@@ -516,6 +588,7 @@ function actualizarPersonas() {
 function crearCelda(texto) {
     const celda = document.createElement("td");
     celda.textContent = texto;
+
     return celda;
 }
 
@@ -535,7 +608,6 @@ function crearEntrada(valor, minimo, alCambiar) {
     return entrada;
 }
 
-
 function renderizarConceptos() {
     const tbody = document.getElementById("cotizacionBody");
     const vacio = document.getElementById("emptyMessage");
@@ -544,12 +616,17 @@ function renderizarConceptos() {
 
     tbody.replaceChildren();
 
-    vacio.style.display = conceptos.length ? "none" : "block";
+    // Los conceptos incluidos se mantienen en la lógica interna del paquete,
+    // pero no se muestran en la tabla de conceptos seleccionados.
+    const conceptosVisibles = conceptos
+        .map((concepto, index) => ({ concepto, index }))
+        .filter(({ concepto }) => concepto.incluido !== true);
 
-    conceptos.forEach((concepto, index) => {
+    vacio.style.display = conceptosVisibles.length ? "none" : "block";
+
+    conceptosVisibles.forEach(({ concepto, index }) => {
         const fila = document.createElement("tr");
 
-        // Nombre y tipo de concepto
         const celdaNombre = document.createElement("td");
 
         const nombre = document.createElement("strong");
@@ -564,9 +641,7 @@ function renderizarConceptos() {
             tipo
         );
 
-        // Cantidad: bloqueada únicamente para los incluidos
         const celdaCantidad = document.createElement("td");
-
 
         celdaCantidad.appendChild(
             crearEntrada(
@@ -576,58 +651,44 @@ function renderizarConceptos() {
             )
         );
 
-        // Unidad
         const celdaUnidad = crearCelda(concepto.unidad);
 
-        // Precio: bloqueado únicamente para los incluidos
         const celdaPrecio = document.createElement("td");
 
-        if (concepto.incluido) {
-            celdaPrecio.textContent = dinero(concepto.precio);
-        } else {
-            celdaPrecio.appendChild(
-                crearEntrada(
-                    concepto.precio,
-                    "0.01",
-                    valor => cambiarPrecio(index, valor)
-                )
-            );
-        }
+        celdaPrecio.appendChild(
+            crearEntrada(
+                concepto.precio,
+                "0",
+                valor => cambiarPrecio(index, valor)
+            )
+        );
 
-        // Total
         const celdaTotal = document.createElement("td");
+
         const total = document.createElement("strong");
 
         total.textContent = dinero(
-            concepto.precio * concepto.cantidad
+            concepto.incluido
+                ? 0
+                : concepto.precio * concepto.cantidad
         );
 
         celdaTotal.appendChild(total);
 
-        // Acción: los incluidos no se pueden eliminar
         const celdaEliminar = document.createElement("td");
 
-        if (concepto.incluido) {
-            const etiqueta = document.createElement("span");
-            etiqueta.textContent = "Incluido";
-            etiqueta.className = "concepto-incluido";
+        const boton = document.createElement("button");
 
-            celdaEliminar.appendChild(etiqueta);
-        } else {
-            const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "delete-btn";
+        boton.textContent = "Eliminar";
 
-            boton.type = "button";
-            boton.className = "delete-btn";
-            boton.textContent = "Eliminar";
+        boton.addEventListener("click", () => {
+            eliminarConcepto(index);
+        });
 
-            boton.addEventListener("click", () => {
-                eliminarConcepto(index);
-            });
+        celdaEliminar.appendChild(boton);
 
-            celdaEliminar.appendChild(boton);
-        }
-
-        // Agregar todas las celdas a la fila
         fila.append(
             celdaNombre,
             celdaCantidad,
@@ -667,14 +728,10 @@ function actualizarVisibilidadPropina() {
     }
 }
 
-
 function calcularTotales() {
-    // Los incluidos se muestran, pero no se cobran nuevamente.
-    const conceptosCobrables = conceptos.filter(
-        concepto => concepto.incluido !== true
-    );
+    const subtotal = conceptos.reduce((suma, concepto) => {
+        if (concepto.incluido) return suma;
 
-    const subtotal = conceptosCobrables.reduce((suma, concepto) => {
         return suma + (
             Number(concepto.precio || 0) *
             Number(concepto.cantidad || 0)
@@ -688,9 +745,10 @@ function calcularTotales() {
 
     const base = Math.max(0, subtotal - descuento);
 
-    const porcentajePropina = llevaPropina()
-        ? Math.max(0, Number(obtenerValor("propina")) || 0)
-        : 0;
+    const porcentajePropina = Math.max(
+        0,
+        Number(obtenerValor("propina")) || 0
+    );
 
     const propina = base * porcentajePropina / 100;
     const total = base + propina;
@@ -724,6 +782,7 @@ function calcularTotales() {
    CSRF DE DJANGO
 ========================================================= */
 
+
 function obtenerCookie(nombre) {
     const prefijo = nombre + "=";
 
@@ -754,7 +813,9 @@ async function generarCotizacion() {
     }
 
     if (!cliente || !tipoEvento || !fecha || !lugar) {
-        alert("Completa el cliente, tipo de evento, fecha y lugar.");
+        alert(
+            "Completa el cliente, tipo de evento, fecha y lugar."
+        );
         return;
     }
 
@@ -770,6 +831,8 @@ async function generarCotizacion() {
     );
 
     const paquete = obtenerPaqueteActual(paqueteSeleccionado);
+    const selectorSubpaquete = document.getElementById("subpaqueteSeleccionado");
+    const subpaqueteNombre = selectorSubpaquete?.selectedOptions?.[0]?.textContent?.trim() || "";
 
     const payload = {
         cliente,
@@ -780,14 +843,17 @@ async function generarCotizacion() {
         hora_inicio: obtenerValor("horaInicio"),
         hora_fin: obtenerValor("horaFin"),
         personas,
+        cantidad_ninos: Number(
+        document.getElementById("cantidad_ninos")?.value || 0
+        ),
         lugar,
         direccion: obtenerValor("direccionEvento"),
         observaciones: obtenerValor("observaciones"),
         paquete_id: paqueteSeleccionado,
         paquete_nombre: paquete.nombre,
+        subpaquete_id: subpaqueteSeleccionadoId || "",
+        subpaquete_nombre: subpaqueteNombre,
 
-
-       
         conceptos: conceptos.map(concepto => ({
             catalogo_id: concepto.catalogo_id,
             nombre: concepto.nombre,
@@ -797,7 +863,6 @@ async function generarCotizacion() {
             cantidad: Number(concepto.cantidad),
             incluido: concepto.incluido === true
         })),
-
 
         subtotal: totales.subtotal,
         descuento: totales.descuento,
@@ -860,6 +925,8 @@ async function generarCotizacion() {
     }
 }
 
+window.generarCotizacion = generarCotizacion;
+
 /* =========================================================
    INICIALIZACIÓN
 ========================================================= */
@@ -877,13 +944,26 @@ document.addEventListener("DOMContentLoaded", () => {
         ?.addEventListener("input", calcularTotales);
 
     document.getElementById("personas")
-        ?.addEventListener("input", actualizarPersonas);
+        ?.addEventListener("change", actualizarPersonas);
 
-    const seleccionado = document.querySelector(
-        'input[name="paquete"]:checked'
-    );
+    document.getElementById("buscarConcepto")
+        ?.addEventListener("input", filtrarCatalogo);
 
-    if (seleccionado) {
-        seleccionarPaquete(seleccionado.value);
-    }
+    document.getElementById("categoryFilter")
+        ?.addEventListener("change", filtrarCatalogo);
+
+    document.getElementById("mostrarMenuCompleto")
+        ?.addEventListener("change", filtrarCatalogo);
+
+    document.getElementById("subpaqueteSeleccionado")
+        ?.addEventListener("change", evento => {
+            seleccionarSubpaquete(evento.target.value);
+        });
+
+    document.querySelectorAll('input[name="paquete"]')
+        .forEach(radio => {
+            radio.addEventListener("change", () => {
+                seleccionarPaquete(radio.value);
+            });
+        });
 });

@@ -196,6 +196,12 @@ class DetalleHospedaje(models.Model):
 
     fecha_check_in = models.DateField(blank=True, null=True)
     fecha_check_out = models.DateField(blank=True, null=True)
+    precio_unitario = models.DecimalField(
+    max_digits=10,
+    decimal_places=2,
+    blank=True,
+    null=True
+    )
 
     id_hospedaje = models.ForeignKey(
         'Hospedaje',
@@ -823,3 +829,18 @@ class ReservaHabitacionWeb(models.Model):
 
     def __str__(self):
         return f"{self.nombre} - {self.tipo_habitacion}"
+
+class RestriccionesCotizacion(models.Model):
+    id_restriccion = models.AutoField(primary_key=True)
+    titulo = models.CharField(max_length=150)
+    descripcion = models.TextField()
+    orden = models.IntegerField(default=1)
+    estado = models.BooleanField(default=True)
+
+    class Meta:
+        managed = False
+        db_table = "restricciones_cotizacion"
+
+    def __str__(self):
+        return self.titulo
+

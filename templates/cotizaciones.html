@@ -637,6 +637,10 @@
                     Selecciona una cotización para consultar sus pagos.
 
                 </div>
+                <div id="comisionCancelacion"
+                    class="alert alert-warning"
+                    hidden>
+                </div>
 
                 <div id="contenidoPagos" class="table-responsive">
 
@@ -702,6 +706,7 @@
 let botonCotizacionActual = null;
 
 async function cargarPagos(boton) {
+    
 
     botonCotizacionActual = boton;
 
@@ -712,6 +717,13 @@ async function cargarPagos(boton) {
     const mensaje = document.getElementById("mensajePagos");
 
     const cuerpo = document.getElementById("tablaPagosBody");
+    const comisionElemento = document.getElementById(
+    "comisionCancelacion"
+);
+
+    // Limpiar la comisión anterior al abrir otra cotización.
+    comisionElemento.hidden = true;
+    comisionElemento.textContent = "";
 
     document.getElementById("numeroCotizacionModal").textContent =
 
@@ -731,12 +743,32 @@ async function cargarPagos(boton) {
 
         });
 
-        const resultado = await respuesta.json();
+        const textoRespuesta = await respuesta.text();
+
+        let resultado;
+
+        try {
+            resultado = JSON.parse(textoRespuesta);
+        } catch (error) {
+            console.error("Respuesta recibida:", textoRespuesta);
+            throw new Error(
+                "Django devolvió HTML en lugar de JSON. Revisá la URL y la consola."
+            );
+        }
 
         if (!respuesta.ok || !resultado.ok) {
 
             throw new Error(resultado.error || "No se pudieron consultar los pagos.");
 
+        }
+        if (resultado.estado === "Cancelada") {
+            comisionElemento.hidden = false;
+            comisionElemento.textContent =
+                "Comisión del total sin propina: $" +
+                Number(resultado.comision_cancelacion || 0).toFixed(2);
+        } else {
+            comisionElemento.hidden = true;
+            comisionElemento.textContent = "";
         }
 
         if (!resultado.pagos.length) {
@@ -752,6 +784,7 @@ async function cargarPagos(boton) {
         mensaje.className = "alert alert-info";
 
         mensaje.textContent = "Se encontraron " + resultado.pagos.length + " pago(s).";
+
 
         resultado.pagos.forEach(pago => {
 

@@ -91,7 +91,11 @@ urlpatterns = [
         views.subir_dte_pago,
         name="subir_dte_pago",
     ),
-
+        path(
+        "hospedaje/calendario/",
+        views.calendario_hospedaje,
+        name="calendario_hospedaje"
+    ),
 
 
 
